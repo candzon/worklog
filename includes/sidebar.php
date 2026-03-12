@@ -1,5 +1,8 @@
 <?php
-// Collapsed sidebar partial — include this after header.php
+require_once __DIR__ . '/../functions/helpers.php';
+require_once __DIR__ . '/../config/database.php';
+// Ensure user is logged in for non-public pages
+require_login();
 ?>
 <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
   <div class="sidebar-brand">
@@ -31,7 +34,18 @@
             <p>Daftar Pekerjaan</p>
           </a>
         </li>
+
+        
+
       </ul>
+
+      <div>
+        <hr class="sidebar-divider">
+        <a href="<?php echo site_url('logout.php'); ?>" class="btn btn-outline-danger w-100 mb-3">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </a>
+      </div>
+
     </nav>
   </div>
 </aside>

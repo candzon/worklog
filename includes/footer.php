@@ -1,5 +1,8 @@
 <?php
-// Footer partial — closes main and includes scripts
+require_once __DIR__ . '/../functions/helpers.php';
+require_once __DIR__ . '/../config/database.php';
+// Ensure user is logged in for non-public pages
+require_login();
 ?>
 	
 	<!-- /.app-wrapper -->
@@ -12,6 +15,8 @@
 	<script src="https://cdn.jsdelivr.net/npm/overlayscrollbars@2.11.0/browser/overlayscrollbars.browser.es6.min.js" crossorigin="anonymous"></script>
 	<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" crossorigin="anonymous"></script>
 	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	<script src="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.4.2/dist/event-calendar.min.js"></script>
 	<script src="<?php echo asset_url('js/adminlte.js'); ?>"></script>
 
 	<script>
@@ -23,6 +28,13 @@
 			}
 		});
 	</script>
+
+<?php
+// Render any queued SweetAlert flash message (prints a <script> tag)
+if (function_exists('render_flash_swal')) {
+    render_flash_swal();
+}
+?>
 
 </body>
 </html>
