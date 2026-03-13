@@ -12,20 +12,12 @@ if (isset($conn)) {
     if ($res) {
         while ($r = $res->fetch_assoc()) {
             $start = $r['due_date'] ?: $r['created_at'];
-            $startIso = $start ? date('c', strtotime($start)) : null;
+            $startIso = $start ? date('Y-m-d\TH:i:s', strtotime($start)) : null;
             if ($startIso === null) continue;
             $events[] = [
                 'id' => $r['id'],
                 'title' => $r['judul'],
                 'start' => $startIso,
-                'end' => $startIso,
-                'extendedProps' => [
-                    'description' => $r['deskripsi'],
-                    'assigned_npp' => $r['assigned_npp'],
-                    'status' => $r['status'],
-                    'reporter_npp' => $r['reporter_npp'],
-                    'reporter_name' => $r['reporter_name'],
-                ],
                 'color' => ($r['status'] === 'done') ? '#28a745' : '#007bff',
             ];
         }

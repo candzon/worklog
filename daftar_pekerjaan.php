@@ -98,28 +98,31 @@ if (isset($conn)) {
                     attempts++;
                     var el = document.getElementById('calendar');
                     if (window.FullCalendar && el) {
+                        var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+                        var isMobile = viewportWidth < 576; // match CSS mobile breakpoint
+                        var initialView = isMobile ? 'listWeek' : 'dayGridMonth';
+                        var headerRight = isMobile ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek,listWeek';
+
                         var calendar = new FullCalendar.Calendar(el, {
-                            initialView: 'dayGridMonth',
-                            headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listWeek' },
+                            initialView: initialView,
+                            headerToolbar: { left: 'prev,next today', center: 'title', right: headerRight },
                             events: '<?php echo site_url("api/events_pekerjaan.php"); ?>',
+                            displayEventTime: false,
+                            height: 'auto',
+                            expandRows: true,
+                            dayMaxEventRows: 3,
+                            locale: 'id',
+                            navLinks: true,
                             dateClick: function(info){
-                                // open modal to create job on clicked date
                                 if (typeof window.openPekerjaanModal === 'function'){
                                     window.openPekerjaanModal(info.dateStr);
                                 }
                             },
-                            locale: 'id',
-                            navLinks: true,
                             eventClick: function(info){
                                 var props = info.event.extendedProps || {};
                                 var d = props.description || '';
                                 var status = props.status || '';
                                 var assigned = props.ditugaskan || '';
-                                var footerHtml = '';
-                                var buttons = {
-                                    confirmButtonText: 'Tutup',
-                                };
-                                // if current user is assignee and not already done, allow marking done
                                 if (currentUserNpp && assigned && assigned === currentUserNpp && status !== 'done') {
                                     if (window.Swal) {
                                         Swal.fire({
@@ -130,7 +133,6 @@ if (isset($conn)) {
                                             cancelButtonText: 'Tandai Selesai',
                                         }).then(function(res){
                                             if (res.dismiss === Swal.DismissReason.cancel) {
-                                                // mark done
                                                 fetch('<?php echo site_url("api/mark_done.php"); ?>', { method: 'POST', credentials: 'same-origin', body: new URLSearchParams({ id: info.event.id }) })
                                                 .then(r => r.json()).then(function(json){
                                                     if (json && json.success){
@@ -150,11 +152,19 @@ if (isset($conn)) {
                                         alert(info.event.title + '\n' + d);
                                     }
                                 }
-                            }
+                            },
+                            views: {
+                                dayGridMonth: { dayMaxEventRows: 3 },
+                                listWeek: { noEventMessage: 'Tidak ada pekerjaan minggu ini' }
+                            },
+                            eventDisplay: 'block',
+                            displayEventTime: false,
+                            eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
                         });
                         calendar.render();
-                        // expose calendar for refetch
                         window.pekerjaanCalendar = calendar;
+
+                        if (isMobile) el.classList.add('mobile-calendar');
                     } else if (attempts < 60) {
                         setTimeout(tryInit, 250);
                     } else {
@@ -176,7 +186,7 @@ if (isset($conn)) {
 
                         <!-- Modal for creating pekerjaan -->
                         <div class="modal fade" id="pekerjaanModal" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-lg modal-dialog-centered">
+                            <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title">Buat Pekerjaan</h5>
@@ -186,19 +196,19 @@ if (isset($conn)) {
                                         <form id="pekerjaanForm">
                                             <div class="mb-3">
                                                 <label class="form-label">Judul</label>
-                                                <input name="judul" id="pj_judul" class="form-control" required>
+                                                <input name="judul" id="pj_judul" class="form-control form-control-lg" required>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Deskripsi</label>
-                                                <textarea name="deskripsi" id="pj_deskripsi" class="form-control" rows="4"></textarea>
+                                                <textarea name="deskripsi" id="pj_deskripsi" class="form-control form-control-lg" rows="4"></textarea>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Tanggal Selesai</label>
-                                                <input type="date" name="due_date" id="pj_due" class="form-control">
+                                                <input type="date" name="due_date" id="pj_due" class="form-control form-control-lg">
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label">Ditugaskan ke</label>
-                                                <select name="ditugaskan" id="pj_ditugaskan" class="form-select" required>
+                                                <select name="ditugaskan" id="pj_ditugaskan" class="form-select form-select-lg" required>
                                                     <option value="">-- Pilih Pegawai --</option>
                                                     <?php foreach ($employees as $emp): ?>
                                                         <option value="<?php echo e($emp['npp']); ?>"><?php echo e($emp['nama_emp']); ?> (<?php echo e($emp['npp']); ?>)</option>

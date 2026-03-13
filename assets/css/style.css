@@ -22,3 +22,27 @@
   .brand-flag{width:32px;height:26px;left:4px}
   .brand-link .brand-image{width:22px;height:22px;margin-left:6px}
 }
+
+/* Mobile-friendly tweaks for daftar_pekerjaan modal and calendar */
+@media (max-width: 575.98px) {
+  .modal .modal-content { height: 100vh; border-radius: 0; }
+  .modal .modal-body { padding: 1rem; overflow: auto; }
+  .modal .modal-footer { padding: 0.75rem; }
+  .form-control, .form-select, textarea { font-size: 1rem; }
+  .btn { padding: 0.6rem 0.9rem; }
+  #calendar { padding: 0 6px; }
+  .fc .fc-daygrid-event { font-size: 0.9rem; padding: 0.25rem; }
+  .fc .fc-toolbar-chunk { display: block; text-align: center; }
+  .fc .fc-toolbar-chunk .fc-button { margin: 4px 2px; }
+}
+
+/* Additional mobile tweaks for FullCalendar */
+@media (max-width: 575.98px) {
+  /* tighten toolbar and center title */
+  .mobile-calendar .fc .fc-toolbar-title { font-size: 1rem; }
+  .mobile-calendar .fc .fc-toolbar-chunk { display:block; text-align:center; }
+  .mobile-calendar .fc .fc-daygrid-event, .mobile-calendar .fc .fc-list-item { white-space: normal; }
+  /* make list items more compact */
+  .mobile-calendar .fc .fc-list-item > .fc-list-item-main { padding: 0.35rem 0.5rem; }
+  .mobile-calendar .fc .fc-daygrid-event { padding: 0.25rem 0.4rem; }
+}
