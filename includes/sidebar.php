@@ -3,6 +3,8 @@ require_once __DIR__ . '/../functions/helpers.php';
 require_once __DIR__ . '/../config/database.php';
 // Ensure user is logged in for non-public pages
 require_login();
+ensure_session_started();
+$currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 <aside class="app-sidebar bg-body-secondary shadow" data-bs-theme="dark">
   <div class="sidebar-brand">
@@ -22,14 +24,14 @@ require_login();
           data-accordion="false"
           id="navigation">
         <li class="nav-item">
-          <a href="<?php echo site_url('index.php'); ?>" class="nav-link">
+          <a href="<?php echo site_url('index.php'); ?>" class="nav-link <?php echo $currentPage === 'index.php' ? 'active' : ''; ?>">
             <i class="nav-icon bi bi-speedometer"></i>
             <p>Dashboard</p>
           </a>
         </li>
 
         <li class="nav-item">
-          <a href="<?php echo site_url('daftar_pekerjaan.php'); ?>" class="nav-link">
+          <a href="<?php echo site_url('daftar_pekerjaan.php'); ?>" class="nav-link <?php echo $currentPage === 'daftar_pekerjaan.php' ? 'active' : ''; ?>">
             <i class="nav-icon bi bi-list-check"></i>
             <p>Daftar Pekerjaan</p>
           </a>

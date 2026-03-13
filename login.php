@@ -15,14 +15,14 @@ require_once __DIR__ . '/config/database.php';
 
       if (empty($errors)) {
         if (isset($conn)) {
-          $stmt = $conn->prepare("SELECT npp, password, nama_emp, nama_bagian FROM employee WHERE npp = ? LIMIT 1");
+          $stmt = $conn->prepare("SELECT npp, password, nama_emp, nama_bagian, role_id FROM employee WHERE npp = ? LIMIT 1");
           if ($stmt) {
             $stmt->bind_param('s', $npp);
             $stmt->execute();
             $res = $stmt->get_result();
             $user = $res->fetch_assoc() ?? null;
             if ($user && ( (function_exists('password_verify') && password_verify($password, $user['password'])) || $user['password'] === $password )) {
-              set_user_npp($user['npp'], $user['nama_emp'], $user['nama_bagian']);
+              set_user_npp($user['npp'], $user['nama_emp'], $user['nama_bagian'], $user['role_id']);
               // enqueue a SweetAlert success message for the next page
               if (function_exists('flash_swal')) {
                 flash_swal('success', 'Login berhasil', 'Selamat datang, ' . $user['nama_emp']);

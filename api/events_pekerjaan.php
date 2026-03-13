@@ -7,10 +7,42 @@ header('Content-Type: application/json; charset=utf-8');
 
 $events = [];
 if (isset($conn)) {
-    $sql = "SELECT p.id, p.judul, p.deskripsi, p.tgl_mulai, p.tgl_selesai, p.created_at, p.status, p.ditugaskan, p.npp AS reporter_npp, p.nama_emp AS reporter_name, e.nama_emp AS assigned_name
-            FROM pekerjaan p
-            LEFT JOIN employee e ON e.npp = p.ditugaskan";
-    $res = $conn->query($sql);
+    // If the current user has role 'user', only return events assigned to them
+    $roleName = null;
+    if (!empty($_SESSION['npp'])) {
+        $stmtR = $conn->prepare("SELECT r.name AS role_name FROM employee e LEFT JOIN roles r ON e.role_id = r.id WHERE e.npp = ? LIMIT 1");
+        if ($stmtR) {
+            $stmtR->bind_param('s', $_SESSION['npp']);
+            $stmtR->execute();
+            $resR = $stmtR->get_result();
+            if ($resR) {
+                $rowR = $resR->fetch_assoc();
+                $roleName = $rowR['role_name'] ?? null;
+            }
+            $stmtR->close();
+        }
+    }
+
+    if ($roleName === 'user' && !empty($_SESSION['npp'])) {
+        $sql = "SELECT p.id, p.judul, p.deskripsi, p.tgl_mulai, p.tgl_selesai, p.created_at, p.updated_at, p.status, p.ditugaskan, p.npp AS reporter_npp, p.nama_emp AS reporter_name, e.nama_emp AS assigned_name
+                FROM pekerjaan p
+                LEFT JOIN employee e ON e.npp = p.ditugaskan
+                WHERE p.ditugaskan = ?";
+        $stmt = $conn->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param('s', $_SESSION['npp']);
+            $stmt->execute();
+            $res = $stmt->get_result();
+        } else {
+            $res = false;
+        }
+    } else {
+        $sql = "SELECT p.id, p.judul, p.deskripsi, p.tgl_mulai, p.tgl_selesai, p.created_at, p.updated_at, p.status, p.ditugaskan, p.npp AS reporter_npp, p.nama_emp AS reporter_name, e.nama_emp AS assigned_name
+                FROM pekerjaan p
+                LEFT JOIN employee e ON e.npp = p.ditugaskan";
+        $res = $conn->query($sql);
+    }
+
     if ($res) {
         while ($r = $res->fetch_assoc()) {
             $startDate = $r['tgl_mulai'] ?: null;
@@ -36,6 +68,7 @@ if (isset($conn)) {
                     'reporter_name' => $r['reporter_name'],
                     'tgl_mulai' => $r['tgl_mulai'],
                     'tgl_selesai' => $r['tgl_selesai'],
+                    'done_at' => $r['updated_at'] ?? null,
                 ],
             ];
 

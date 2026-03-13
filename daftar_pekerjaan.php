@@ -18,8 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tglSelesai = trim($_POST['tgl_selesai'] ?? '');
     $ditugaskan = trim($_POST['ditugaskan'] ?? '');
 
-    if ($judul === '')
-        $errors[] = 'Judul pekerjaan wajib diisi';
+    if ($judul === '') $errors[] = 'Judul pekerjaan wajib diisi';
+    if ($deskripsi === '') $errors[] = 'Deskripsi pekerjaan wajib diisi';
+    if ($tglMulai === '') $errors[] = 'Tanggal mulai wajib diisi';
+    if ($tglSelesai === '') $errors[] = 'Tanggal selesai wajib diisi';
+    if ($ditugaskan === '') $errors[] = 'Pilih pegawai yang ditugaskan';
 
 
     if (isset($conn)) {
@@ -144,6 +147,14 @@ if (isset($conn)) {
                             if (isNaN(d.getTime())) return String(yyyyMmDd);
                             return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
                         }
+                            function formatDateTimeId(dateTimeStr){
+                                if (!dateTimeStr) return '-';
+                                // Normalize space to T for Date parsing
+                                var s = String(dateTimeStr).replace(' ', 'T');
+                                var d = new Date(s);
+                                if (isNaN(d.getTime())) return String(dateTimeStr);
+                                return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
+                            }
 
                         var props = info.event.extendedProps || {};
                         var desc = props.description || '';
@@ -153,6 +164,7 @@ if (isset($conn)) {
                         var reporter = props.reporter_name || props.reporter_npp || '';
                         var tglMulai = props.tgl_mulai || info.event.startStr || '';
                         var tglSelesai = props.tgl_selesai || '';
+                        var doneAt = props.done_at || '';
 
                         var assignedLabel = assigned ? (assignedName ? (assignedName + ' (' + assigned + ')') : assigned) : '-';
                         var reporterLabel = reporter ? reporter : '-';
@@ -166,6 +178,8 @@ if (isset($conn)) {
                         var assignedEl = document.getElementById('pj_detail_assigned');
                         var reporterEl = document.getElementById('pj_detail_reporter');
                         var descEl = document.getElementById('pj_detail_desc');
+                        var doneAtEl = document.getElementById('pj_detail_done_at');
+                        var doneRow = document.getElementById('pj_detail_done_row');
                         var alertEl = document.getElementById('pj_detail_alert');
                         var doneBtn = document.getElementById('pj_detail_done');
 
@@ -196,6 +210,17 @@ if (isset($conn)) {
                             doneBtn.dataset.id = info.event.id;
                             doneBtn.disabled = false;
                             doneBtn.classList.toggle('d-none', !canDone);
+                        }
+
+                        // Show completion time when available and status is done
+                        if (doneRow && doneAtEl) {
+                            if (status === 'done' && doneAt) {
+                                doneAtEl.textContent = formatDateTimeId(doneAt);
+                                doneRow.classList.remove('d-none');
+                            } else {
+                                doneAtEl.textContent = '-';
+                                doneRow.classList.add('d-none');
+                            }
                         }
 
                         if (window.openPekerjaanDetailModal) {
@@ -239,17 +264,17 @@ if (isset($conn)) {
                                                 <input name="judul" id="pj_judul" class="form-control form-control-lg" required>
                                             </div>
                                             <div class="mb-3">
-                                                <label class="form-label">Deskripsi</label>
-                                                <textarea name="deskripsi" id="pj_deskripsi" class="form-control form-control-lg" rows="4"></textarea>
+                                                    <label class="form-label">Deskripsi</label>
+                                                <textarea name="deskripsi" id="pj_deskripsi" class="form-control form-control-lg" rows="4" required></textarea>
                                             </div>
                                             <div class="row g-3">
                                                 <div class="col-12 col-md-6">
                                                     <label class="form-label">Tanggal Mulai</label>
-                                                    <input type="date" name="tgl_mulai" id="pj_mulai" class="form-control form-control-lg">
+                                                    <input type="date" name="tgl_mulai" id="pj_mulai" class="form-control form-control-lg" required>
                                                 </div>
                                                 <div class="col-12 col-md-6">
                                                     <label class="form-label">Tanggal Selesai</label>
-                                                    <input type="date" name="tgl_selesai" id="pj_selesai" class="form-control form-control-lg">
+                                                    <input type="date" name="tgl_selesai" id="pj_selesai" class="form-control form-control-lg" required>
                                                 </div>
                                             </div>
                                             <div class="mb-3">
@@ -305,6 +330,10 @@ if (isset($conn)) {
                                                 <div class="text-uppercase text-body-secondary small">Deskripsi</div>
                                                 <div id="pj_detail_desc" class="mt-1">-</div>
                                             </div>
+                                            <div class="list-group-item px-0" id="pj_detail_done_row">
+                                                <div class="text-uppercase text-body-secondary small">Waktu Tugas Selesai</div>
+                                                <div class="fw-semibold" id="pj_detail_done_at">-</div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
@@ -354,8 +383,13 @@ if (isset($conn)) {
                                 // submit handler
                             document.getElementById('pj_save').addEventListener('click', function(){
                                 var form = document.getElementById('pekerjaanForm');
-                                var fd = new FormData(form);
-                                        fetch('<?php echo site_url("api/create_pekerjaan.php"); ?>', { method: 'POST', body: fd, credentials: 'same-origin' })
+                                    // client-side validation: use HTML5 constraint validation
+                                    if (!form.checkValidity()) {
+                                        form.reportValidity();
+                                        return;
+                                    }
+                                    var fd = new FormData(form);
+                                            fetch('<?php echo site_url("api/create_pekerjaan.php"); ?>', { method: 'POST', body: fd, credentials: 'same-origin' })
                                         .then(function(res){ return res.json(); })
                                         .then(function(json){
                                                 if (json && json.success){

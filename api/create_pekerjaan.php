@@ -14,6 +14,28 @@ if (empty($npp)) {
     exit;
 }
 
+// Enforce role-based create permission using existing schema: users with role 'user' cannot create
+$roleName = null;
+if (isset($conn)) {
+    $stmtRole = $conn->prepare("SELECT r.name AS role_name FROM employee e LEFT JOIN roles r ON e.role_id = r.id WHERE e.npp = ? LIMIT 1");
+    if ($stmtRole) {
+        $stmtRole->bind_param('s', $npp);
+        $stmtRole->execute();
+        $resRole = $stmtRole->get_result();
+        if ($resRole) {
+            $r = $resRole->fetch_assoc();
+            $roleName = $r['role_name'] ?? null;
+        }
+        $stmtRole->close();
+    }
+}
+
+if ($roleName === 'user') {
+    echo json_encode(['success' => false, 'message' => 'Anda tidak memiliki izin untuk membuat pekerjaan baru']);
+    http_response_code(403);
+    exit;
+}
+
 // Ambil input: form-urlencoded atau JSON
 $input = $_POST;
 if (empty($input)) {
@@ -31,6 +53,28 @@ $ditugaskan = trim($input['ditugaskan_npp'] ?? $input['ditugaskan'] ?? '');
 
 if ($judul === '') {
     echo json_encode(['success' => false, 'message' => 'Judul wajib diisi']);
+    http_response_code(400);
+    exit;
+}
+
+// Validate required fields
+if ($deskripsi === '') {
+    echo json_encode(['success' => false, 'message' => 'Deskripsi wajib diisi']);
+    http_response_code(400);
+    exit;
+}
+if ($tglMulai === '') {
+    echo json_encode(['success' => false, 'message' => 'Tanggal Mulai wajib diisi']);
+    http_response_code(400);
+    exit;
+}
+if ($tglSelesai === '') {
+    echo json_encode(['success' => false, 'message' => 'Tanggal Selesai wajib diisi']);
+    http_response_code(400);
+    exit;
+}
+if ($ditugaskan === '') {
+    echo json_encode(['success' => false, 'message' => 'Pegawai yang ditugaskan wajib dipilih']);
     http_response_code(400);
     exit;
 }
