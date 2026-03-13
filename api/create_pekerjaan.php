@@ -24,7 +24,8 @@ if (empty($input)) {
 
 $judul = trim($input['judul'] ?? '');
 $deskripsi = trim($input['deskripsi'] ?? '');
-$due = trim($input['due_date'] ?? ''); // YYYY-MM-DD atau ''
+$tglMulai = trim($input['tgl_mulai'] ?? ''); // YYYY-MM-DD atau ''
+$tglSelesai = trim($input['tgl_selesai'] ?? ''); // YYYY-MM-DD atau ''
 // Terima kedua kemungkinan nama field dari form/JS
 $ditugaskan = trim($input['ditugaskan_npp'] ?? $input['ditugaskan'] ?? '');
 
@@ -40,14 +41,14 @@ if (!isset($conn)) {
     exit;
 }
 
-$stmt = $conn->prepare("INSERT INTO pekerjaan (judul, deskripsi, npp, nama_emp, due_date, ditugaskan) VALUES (?, ?, ?, ?, NULLIF(?, ''), ?)");
+$stmt = $conn->prepare("INSERT INTO pekerjaan (judul, deskripsi, npp, nama_emp, tgl_mulai, tgl_selesai, ditugaskan) VALUES (?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?)");
 if (!$stmt) {
     echo json_encode(['success' => false, 'message' => 'Gagal menyiapkan query']);
     http_response_code(500);
     exit;
 }
 
-$stmt->bind_param('ssssss', $judul, $deskripsi, $npp, $nama_emp, $due, $ditugaskan);
+$stmt->bind_param('sssssss', $judul, $deskripsi, $npp, $nama_emp, $tglMulai, $tglSelesai, $ditugaskan);
 $ok = $stmt->execute();
 $insertId = $stmt->insert_id;
 $stmt->close();
