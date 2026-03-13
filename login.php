@@ -15,14 +15,14 @@ require_once __DIR__ . '/config/database.php';
 
       if (empty($errors)) {
         if (isset($conn)) {
-          $stmt = $conn->prepare("SELECT npp, password, nama_emp FROM employee WHERE npp = ? LIMIT 1");
+          $stmt = $conn->prepare("SELECT npp, password, nama_emp, nama_bagian FROM employee WHERE npp = ? LIMIT 1");
           if ($stmt) {
             $stmt->bind_param('s', $npp);
             $stmt->execute();
             $res = $stmt->get_result();
             $user = $res->fetch_assoc() ?? null;
             if ($user && ( (function_exists('password_verify') && password_verify($password, $user['password'])) || $user['password'] === $password )) {
-              set_user_npp($user['npp'], $user['nama_emp']);
+              set_user_npp($user['npp'], $user['nama_emp'], $user['nama_bagian']);
               // enqueue a SweetAlert success message for the next page
               if (function_exists('flash_swal')) {
                 flash_swal('success', 'Login berhasil', 'Selamat datang, ' . $user['nama_emp']);
@@ -111,5 +111,11 @@ require_once __DIR__ . '/config/database.php';
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.min.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="<?php echo asset_url('js/adminlte.js'); ?>"></script>
+<?php
+// Render any queued SweetAlert flash message (e.g., logout message)
+if (function_exists('render_flash_swal')) {
+    render_flash_swal();
+}
+?>
 </body>
 </html>

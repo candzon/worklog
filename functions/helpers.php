@@ -44,16 +44,17 @@ function ensure_session_started() {
     }
 }
 
-function set_user_npp($npp, $nama_emp = null) {
+function set_user_npp($npp, $nama_emp = null, $nama_bagian = null) {
     ensure_session_started();
     $_SESSION['npp'] = $npp;
     if ($nama_emp !== null) $_SESSION['nama_emp'] = $nama_emp;
+    if ($nama_bagian !== null) $_SESSION['nama_bagian'] = $nama_bagian;
     if (function_exists('session_regenerate_id')) session_regenerate_id(true);
 }
 
 function clear_user_session() {
     ensure_session_started();
-    unset($_SESSION['npp'], $_SESSION['nama_emp']);
+    unset($_SESSION['npp'], $_SESSION['nama_emp'], $_SESSION['nama_bagian']);
     if (function_exists('session_regenerate_id')) session_regenerate_id(true);
 }
 
