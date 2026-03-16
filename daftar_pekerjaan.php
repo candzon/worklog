@@ -92,6 +92,88 @@ if (isset($conn)) {
                 </div>
             </div>
 
+            <style>
+            /* Custom calendar event card: improved text fitting and truncation */
+            .fc-custom-event{
+                font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+                color:var(--bs-body-color);
+                padding:8px;
+                border-radius:8px;
+                background:#fff;
+                border:1px solid rgba(0,0,0,0.04);
+                box-shadow:0 1px 0 rgba(0,0,0,0.02);
+                display:flex;
+                flex-direction:column;
+                min-height:44px;
+                overflow:hidden;
+            }
+            .fc-custom-event .fc-ce-header{
+                display:flex;
+                align-items:flex-start;
+                justify-content:space-between;
+                gap:8px;
+                min-height:28px;
+            }
+            .fc-custom-event .fc-ce-title{
+                font-weight:600;
+                font-size:14px;
+                line-height:1.15;
+                display:-webkit-box;
+                -webkit-line-clamp:2;
+                -webkit-box-orient:vertical;
+                overflow:hidden;
+                text-overflow:ellipsis;
+                word-break:break-word;
+                margin:0;
+            }
+            .fc-custom-event .fc-ce-deadline{
+                font-size:12px;
+                color:#6c757d;
+                margin-top:4px;
+            }
+            .fc-custom-event .fc-ce-desc{
+                font-size:13px;
+                color:#333;
+                margin-top:6px;
+                max-height:3.6em; /* ~2 lines */
+                overflow:hidden;
+                text-overflow:ellipsis;
+                display:-webkit-box;
+                -webkit-line-clamp:2;
+                -webkit-box-orient:vertical;
+                line-height:1.6;
+            }
+            .fc-custom-event .fc-ce-assigned{
+                font-size:12px;
+                color:#495057;
+                margin-top:8px;
+                border-top:1px dashed rgba(0,0,0,0.04);
+                padding-top:6px;
+                white-space:nowrap;
+                overflow:hidden;
+                text-overflow:ellipsis;
+            }
+            .fc-custom-event .ec-open-btn{
+                font-size:11px;
+                padding:3px 8px;
+                flex:0 0 auto;
+                white-space:nowrap;
+            }
+            /* Improve visuals in month/day grid where space is tight */
+            .fc .fc-daygrid-event .fc-custom-event{
+                padding:6px;
+                font-size:12px;
+            }
+            @media (max-width:575.98px){
+                .fc-custom-event{padding:6px;border-radius:6px}
+                .fc-custom-event .fc-ce-title{font-size:13px;}
+                .fc-custom-event .fc-ce-desc{font-size:12px;-webkit-line-clamp:2}
+                .fc-custom-event .fc-ce-assigned{font-size:11px}
+                .fc-custom-event .ec-open-btn{font-size:11px;padding:2px 6px}
+                .fc-custom-event .fc-ce-header{gap:6px}
+                .fc-custom-event .fc-ce-title{max-width:calc(100% - 70px);} /* leave space for button */
+            }
+            </style>
             <script>
             var currentUserNpp = '<?php echo e($npp ?? ''); ?>';
             window.addEventListener('load', function () {
@@ -105,6 +187,100 @@ if (isset($conn)) {
                 var isMobile = viewportWidth < 576; // match CSS mobile breakpoint
                 var initialView = isMobile ? 'listWeek' : 'dayGridMonth';
                 var headerRight = isMobile ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek,listWeek';
+
+                function showEventDetail(ev){
+                        function escapeHtml(s){
+                            return String(s ?? '')
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#039;');
+                        }
+                        function formatDateId(yyyyMmDd){
+                            if (!yyyyMmDd) return '-';
+                            var d = new Date(yyyyMmDd + 'T00:00:00');
+                            if (isNaN(d.getTime())) return String(yyyyMmDd);
+                            return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
+                        }
+                        function formatDateTimeId(dateTimeStr){
+                            if (!dateTimeStr) return '-';
+                            var s = String(dateTimeStr).replace(' ', 'T');
+                            var d = new Date(s);
+                            if (isNaN(d.getTime())) return String(dateTimeStr);
+                            return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
+                        }
+
+                        var props = ev.extendedProps || {};
+                        var desc = props.description || '';
+                        var status = props.status || '';
+                        var assigned = props.ditugaskan || '';
+                        var assignedName = props.assigned_name || '';
+                        var reporter = props.reporter_name || props.reporter_npp || '';
+                        var tglMulai = props.tgl_mulai || ev.startStr || '';
+                        var tglSelesai = props.tgl_selesai || '';
+                        var doneAt = props.done_at || '';
+
+                        var assignedLabel = assigned ? (assignedName ? (assignedName + ' (' + assigned + ')') : assigned) : '-';
+                        var reporterLabel = reporter ? reporter : '-';
+                        var mulaiText = formatDateId(tglMulai);
+                        var selesaiText = formatDateId(tglSelesai);
+                        var tanggalText = tglSelesai ? (mulaiText + ' — ' + selesaiText) : mulaiText;
+
+                        var titleEl = document.getElementById('pj_detail_title');
+                        var tanggalEl = document.getElementById('pj_detail_tanggal');
+                        var statusEl = document.getElementById('pj_detail_status');
+                        var assignedEl = document.getElementById('pj_detail_assigned');
+                        var reporterEl = document.getElementById('pj_detail_reporter');
+                        var descEl = document.getElementById('pj_detail_desc');
+                        var doneAtEl = document.getElementById('pj_detail_done_at');
+                        var doneRow = document.getElementById('pj_detail_done_row');
+                        var alertEl = document.getElementById('pj_detail_alert');
+                        var doneBtn = document.getElementById('pj_detail_done');
+
+                        if (titleEl) titleEl.textContent = ev.title || '';
+                        if (tanggalEl) tanggalEl.textContent = tanggalText;
+
+                        var statusText = status ? status : '-';
+                        if (statusEl) {
+                            statusEl.textContent = statusText;
+                            statusEl.classList.remove('text-bg-secondary','text-bg-primary','text-bg-success');
+                            if (status === 'done') statusEl.classList.add('text-bg-success');
+                            else if (status && status !== '-') statusEl.classList.add('text-bg-primary');
+                            else statusEl.classList.add('text-bg-secondary');
+                        }
+
+                        if (assignedEl) assignedEl.textContent = assignedLabel;
+                        if (reporterEl) reporterEl.textContent = reporterLabel;
+                        if (descEl) descEl.innerHTML = desc ? escapeHtml(desc).replace(/\n/g,'<br>') : '<span class="text-body-secondary">-</span>';
+
+                        if (alertEl) {
+                            alertEl.classList.add('d-none');
+                            alertEl.classList.remove('alert-success','alert-danger');
+                            alertEl.textContent = '';
+                        }
+
+                        var canDone = currentUserNpp && assigned && assigned === currentUserNpp && status !== 'done';
+                        if (doneBtn) {
+                            doneBtn.dataset.id = ev.id;
+                            doneBtn.disabled = false;
+                            doneBtn.classList.toggle('d-none', !canDone);
+                        }
+
+                        if (doneRow && doneAtEl) {
+                            if (status === 'done' && doneAt) {
+                                doneAtEl.textContent = formatDateTimeId(doneAt);
+                                doneRow.classList.remove('d-none');
+                            } else {
+                                doneAtEl.textContent = '-';
+                                doneRow.classList.add('d-none');
+                            }
+                        }
+
+                        if (window.openPekerjaanDetailModal) {
+                            window.openPekerjaanDetailModal();
+                        }
+                }
 
                 var calendar = new FullCalendar.Calendar(el, {
                     initialView: initialView,
@@ -131,101 +307,48 @@ if (isset($conn)) {
                             window.openPekerjaanModal(info.dateStr);
                         }
                     },
-                    eventClick: function(info){
-                        function escapeHtml(s){
-                            return String(s ?? '')
-                                .replace(/&/g, '&amp;')
-                                .replace(/</g, '&lt;')
-                                .replace(/>/g, '&gt;')
-                                .replace(/"/g, '&quot;')
-                                .replace(/'/g, '&#039;');
-                        }
-                        function formatDateId(yyyyMmDd){
-                            if (!yyyyMmDd) return '-';
-                            // Expect YYYY-MM-DD
-                            var d = new Date(yyyyMmDd + 'T00:00:00');
-                            if (isNaN(d.getTime())) return String(yyyyMmDd);
-                            return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
-                        }
-                            function formatDateTimeId(dateTimeStr){
-                                if (!dateTimeStr) return '-';
-                                // Normalize space to T for Date parsing
-                                var s = String(dateTimeStr).replace(' ', 'T');
-                                var d = new Date(s);
-                                if (isNaN(d.getTime())) return String(dateTimeStr);
-                                return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
-                            }
+                    eventClick: function(info){ showEventDetail(info.event); },
+                    eventContent: function(arg){
+                        function escapeHtml(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+                                                var ev = arg.event;
+                                                var props = ev.extendedProps || {};
+                                                var title = ev.title || '';
+                                                var tgl = props.tgl_selesai || props.tgl_mulai || '';
+                                                var desc = props.description || '';
+                                                var assigned = (props.assigned_name ? (props.assigned_name + ' (' + (props.ditugaskan||'') + ')') : (props.ditugaskan || '')) || '-';
 
-                        var props = info.event.extendedProps || {};
-                        var desc = props.description || '';
-                        var status = props.status || '';
-                        var assigned = props.ditugaskan || '';
-                        var assignedName = props.assigned_name || '';
-                        var reporter = props.reporter_name || props.reporter_npp || '';
-                        var tglMulai = props.tgl_mulai || info.event.startStr || '';
-                        var tglSelesai = props.tgl_selesai || '';
-                        var doneAt = props.done_at || '';
+                                                function humanizeStatus(s){
+                                                        if (!s) return '';
+                                                        try{ return String(s).replace(/_/g,' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }catch(e){return String(s);} 
+                                                }
+                                                var btnLabel = props.status ? humanizeStatus(props.status) : 'Open';
+                                                var statusVal = (props.status || '').toString().toLowerCase();
+                                                var isDone = (statusVal === 'done' || statusVal === 'selesai' || statusVal === 'completed');
+                                                var btnClass = isDone ? 'btn btn-sm btn-success ec-open-btn' : (props.status ? 'btn btn-sm btn-primary ec-open-btn' : 'btn btn-sm btn-outline-primary ec-open-btn');
+                                                var btnAttrs = isDone ? ' disabled' : '';
 
-                        var assignedLabel = assigned ? (assignedName ? (assignedName + ' (' + assigned + ')') : assigned) : '-';
-                        var reporterLabel = reporter ? reporter : '-';
-                        var mulaiText = formatDateId(tglMulai);
-                        var selesaiText = formatDateId(tglSelesai);
-                        var tanggalText = tglSelesai ? (mulaiText + ' — ' + selesaiText) : mulaiText;
+                                                var viewType = (arg.view && arg.view.type) ? String(arg.view.type) : '';
+                                                var includeTitle = !viewType.startsWith('list');
 
-                        var titleEl = document.getElementById('pj_detail_title');
-                        var tanggalEl = document.getElementById('pj_detail_tanggal');
-                        var statusEl = document.getElementById('pj_detail_status');
-                        var assignedEl = document.getElementById('pj_detail_assigned');
-                        var reporterEl = document.getElementById('pj_detail_reporter');
-                        var descEl = document.getElementById('pj_detail_desc');
-                        var doneAtEl = document.getElementById('pj_detail_done_at');
-                        var doneRow = document.getElementById('pj_detail_done_row');
-                        var alertEl = document.getElementById('pj_detail_alert');
-                        var doneBtn = document.getElementById('pj_detail_done');
-
-                        if (titleEl) titleEl.textContent = info.event.title || '';
-                        if (tanggalEl) tanggalEl.textContent = tanggalText;
-
-                        var statusText = status ? status : '-';
-                        if (statusEl) {
-                            statusEl.textContent = statusText;
-                            statusEl.classList.remove('text-bg-secondary','text-bg-primary','text-bg-success');
-                            if (status === 'done') statusEl.classList.add('text-bg-success');
-                            else if (status && status !== '-') statusEl.classList.add('text-bg-primary');
-                            else statusEl.classList.add('text-bg-secondary');
-                        }
-
-                        if (assignedEl) assignedEl.textContent = assignedLabel;
-                        if (reporterEl) reporterEl.textContent = reporterLabel;
-                        if (descEl) descEl.innerHTML = desc ? escapeHtml(desc).replace(/\n/g,'<br>') : '<span class="text-body-secondary">-</span>';
-
-                        if (alertEl) {
-                            alertEl.classList.add('d-none');
-                            alertEl.classList.remove('alert-success','alert-danger');
-                            alertEl.textContent = '';
-                        }
-
-                        var canDone = currentUserNpp && assigned && assigned === currentUserNpp && status !== 'done';
-                        if (doneBtn) {
-                            doneBtn.dataset.id = info.event.id;
-                            doneBtn.disabled = false;
-                            doneBtn.classList.toggle('d-none', !canDone);
-                        }
-
-                        // Show completion time when available and status is done
-                        if (doneRow && doneAtEl) {
-                            if (status === 'done' && doneAt) {
-                                doneAtEl.textContent = formatDateTimeId(doneAt);
-                                doneRow.classList.remove('d-none');
-                            } else {
-                                doneAtEl.textContent = '-';
-                                doneRow.classList.add('d-none');
-                            }
-                        }
-
-                        if (window.openPekerjaanDetailModal) {
-                            window.openPekerjaanDetailModal();
-                        }
+                                                var html = '<div class="fc-custom-event">';
+                                                if (includeTitle) {
+                                                        html += '<div class="fc-ce-header"><div class="fc-ce-title">'+escapeHtml(title)+'</div>'
+                                                                 + '<div><button type="button" class="' + btnClass + '" data-eid="'+escapeHtml(ev.id)+'"' + btnAttrs + '>'+escapeHtml(btnLabel)+'</button></div></div>';
+                                                } else {
+                                                        // In list views FullCalendar already shows the title; avoid repeating it.
+                                                        html += '<div class="fc-ce-header-compact"><div><button type="button" class="' + btnClass + '" data-eid="'+escapeHtml(ev.id)+'"' + btnAttrs + '>'+escapeHtml(btnLabel)+'</button></div></div>';
+                                                }
+                                                html += (tgl ? ('<div class="fc-ce-deadline">'+escapeHtml(tgl)+'</div>') : '');
+                                                html += (desc ? ('<div class="fc-ce-desc">'+escapeHtml(desc)+'</div>') : '');
+                                                html += '<div class="fc-ce-assigned">'+escapeHtml(assigned)+'</div>';
+                                                html += '</div>';
+                                                return { html: html };
+                    },
+                    eventDidMount: function(info){
+                        try {
+                            var btn = info.el.querySelector('.ec-open-btn');
+                            if (btn){ btn.addEventListener('click', function(e){ e.stopPropagation(); showEventDetail(info.event); }); }
+                        } catch (e){}
                     },
                     views: {
                         dayGridMonth: { dayMaxEventRows: 3 },
