@@ -108,8 +108,10 @@ if (isset($conn) && ($roleName !== 'user')) {
   $sql = "SELECT p.ditugaskan AS npp, COALESCE(e.nama_emp, p.ditugaskan) AS nama_emp, COUNT(*) AS cnt FROM pekerjaan p LEFT JOIN employee e ON e.npp = p.ditugaskan GROUP BY p.ditugaskan, e.nama_emp ORDER BY cnt DESC LIMIT 10";
   $res = $conn->query($sql);
   if ($res) {
-    while ($r = $res->fetch_assoc())
+    while ($r = $res->fetch_assoc()) {
+      $r['cnt'] = isset($r['cnt']) ? intval($r['cnt']) : 0;
       $topAssigned[] = $r;
+    }
     $res->free();
   }
 }
@@ -120,8 +122,10 @@ if (isset($conn) && ($roleName !== 'user')) {
   $sql = "SELECT p.ditugaskan AS npp, COALESCE(e.nama_emp, p.ditugaskan) AS nama_emp, COUNT(*) AS cnt FROM pekerjaan p LEFT JOIN employee e ON e.npp = p.ditugaskan WHERE p.status = 'done' GROUP BY p.ditugaskan, e.nama_emp ORDER BY cnt DESC LIMIT 10";
   $res = $conn->query($sql);
   if ($res) {
-    while ($r = $res->fetch_assoc())
+    while ($r = $res->fetch_assoc()) {
+      $r['cnt'] = isset($r['cnt']) ? intval($r['cnt']) : 0;
       $topDone[] = $r;
+    }
     $res->free();
   }
 }
@@ -237,7 +241,7 @@ if (isset($conn) && ($roleName !== 'user')) {
                   <div class="card">
                     <div class="card-header">Pegawai Terbanyak Diberi Tugas</div>
                     <div class="card-body">
-                      <canvas id="topAssignedChart" style="max-height:320px;"></canvas>
+                        <canvas id="topAssignedChart" class="dashboard-chart"></canvas>
                     </div>
                   </div>
                 </div>
@@ -245,7 +249,7 @@ if (isset($conn) && ($roleName !== 'user')) {
                   <div class="card">
                     <div class="card-header">Pegawai Terproduktif</div>
                     <div class="card-body">
-                      <canvas id="topDoneChart" style="max-height:320px;"></canvas>
+                        <canvas id="topDoneChart" class="dashboard-chart"></canvas>
                     </div>
                   </div>
                 </div>
@@ -265,36 +269,189 @@ if (isset($conn) && ($roleName !== 'user')) {
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script>
     (function () {
-      // topAssigned chart
-      var assignedCtx = document.getElementById('topAssignedChart');
-      if (assignedCtx) {
-        var aLabels = <?php echo json_encode(array_map(function ($r) {
-          return ($r['nama_emp'] ?: $r['npp']) . ' (' . $r['npp'] . ')';
-        }, $topAssigned), JSON_UNESCAPED_UNICODE); ?>;
-        var aData = <?php echo json_encode(array_map(function ($r) {
-          return intval($r['cnt']);
-        }, $topAssigned)); ?>;
-        new Chart(assignedCtx, {
+      function numberFormat(n){
+        var num = Number(n || 0);
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      }
+
+      function truncateLabel(s, maxLen){
+        if (s == null) return '';
+        var str = String(s);
+        var m = maxLen || 18;
+        return (str.length > m) ? (str.slice(0, m - 1) + '…') : str;
+      }
+
+      var mobileMq = window.matchMedia('(max-width: 575.98px)');
+      function isMobile(){ return !!(mobileMq && mobileMq.matches); }
+
+      function getThemeColor(){
+        try {
+          var c = getComputedStyle(document.body).getPropertyValue('--bs-body-color').trim();
+          return c || '#333';
+        } catch (e) {
+          return '#333';
+        }
+      }
+
+      function setChartWrapperHeight(canvasEl, labels){
+        var parent = canvasEl && canvasEl.parentElement;
+        if (!parent) return;
+
+        if (isMobile()) {
+          // horizontal bars need extra vertical room for labels
+          var rows = Array.isArray(labels) ? labels.length : 0;
+          var h = Math.min(560, Math.max(280, (rows * 34) + 36));
+          parent.style.height = h + 'px';
+        } else {
+          parent.style.height = '320px';
+        }
+      }
+
+      function createBarChart(canvasEl, labels, data, datasetLabel, palette){
+        if (!canvasEl) return null;
+        var mobile = isMobile();
+        var indexAxis = mobile ? 'y' : 'x';
+
+        setChartWrapperHeight(canvasEl, labels);
+
+        var colors = (palette && palette.length) ? palette : ['rgba(75,192,192,0.8)'];
+        var bg = labels.map(function(_, i){ return colors[i % colors.length]; });
+        var textColor = getThemeColor();
+        var gridColor = 'rgba(0,0,0,0.05)';
+        var tickFontSize = mobile ? 10 : 12;
+
+        var scales;
+        if (indexAxis === 'x') {
+          scales = {
+            x: {
+              ticks: {
+                color: textColor,
+                autoSkip: true,
+                maxRotation: 45,
+                minRotation: 0,
+                font: { size: tickFontSize }
+              },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: textColor,
+                callback: function(v){ return numberFormat(v); },
+                font: { size: tickFontSize }
+              },
+              grid: { color: gridColor }
+            }
+          };
+        } else {
+          // horizontal: y is category labels, x is values
+          scales = {
+            y: {
+              ticks: {
+                color: textColor,
+                autoSkip: false,
+                font: { size: tickFontSize },
+                callback: function(value){
+                  var full = this.getLabelForValue(value);
+                  return truncateLabel(full, 22);
+                }
+              },
+              grid: { display: false }
+            },
+            x: {
+              beginAtZero: true,
+              ticks: {
+                color: textColor,
+                callback: function(v){ return numberFormat(v); },
+                font: { size: tickFontSize }
+              },
+              grid: { color: gridColor }
+            }
+          };
+        }
+
+        return new Chart(canvasEl, {
           type: 'bar',
-          data: { labels: aLabels, datasets: [{ label: 'Jumlah Ditugaskan', data: aData, backgroundColor: 'rgba(255, 159, 64, 0.8)' }] },
-          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, precision: 0 } } }
+          data: {
+            labels: labels,
+            datasets: [{
+              label: datasetLabel,
+              data: data,
+              backgroundColor: bg,
+              borderRadius: 8,
+              borderSkipped: false,
+              maxBarThickness: mobile ? 22 : 48
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: indexAxis,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: function(items){
+                    var it = items && items[0];
+                    return (it && it.label) ? it.label : '';
+                  },
+                  label: function(context){
+                    // prefer parsed.y (value) for vertical charts, fallback to parsed.x
+                    var v = (context.parsed && (context.parsed.y ?? context.parsed.x)) ?? context.raw ?? 0;
+                    return context.dataset.label + ': ' + numberFormat(v);
+                  }
+                }
+              }
+            },
+            layout: { padding: { top: 6, right: 6, left: 6, bottom: 6 } },
+            scales: scales,
+            animation: { duration: 600, easing: 'easeOutQuart' }
+          }
         });
       }
 
-      // topDone chart
-      var doneCtx = document.getElementById('topDoneChart');
-      if (doneCtx) {
-        var dLabels = <?php echo json_encode(array_map(function ($r) {
-          return ($r['nama_emp'] ?: $r['npp']) . ' (' . $r['npp'] . ')';
-        }, $topDone), JSON_UNESCAPED_UNICODE); ?>;
-        var dData = <?php echo json_encode(array_map(function ($r) {
-          return intval($r['cnt']);
-        }, $topDone)); ?>;
-        new Chart(doneCtx, {
-          type: 'bar',
-          data: { labels: dLabels, datasets: [{ label: 'Jumlah Selesai', data: dData, backgroundColor: 'rgba(75, 192, 192, 0.8)' }] },
-          options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, precision: 0 } } }
+      var aLabels = <?php echo json_encode(array_map(function ($r) { return ($r['nama_emp'] ?: $r['npp']) . ' (' . $r['npp'] . ')'; }, $topAssigned), JSON_UNESCAPED_UNICODE); ?>;
+      var aData = <?php echo json_encode(array_map(function ($r) { return intval($r['cnt']); }, $topAssigned)); ?>;
+      var dLabels = <?php echo json_encode(array_map(function ($r) { return ($r['nama_emp'] ?: $r['npp']) . ' (' . $r['npp'] . ')'; }, $topDone), JSON_UNESCAPED_UNICODE); ?>;
+      var dData = <?php echo json_encode(array_map(function ($r) { return intval($r['cnt']); }, $topDone)); ?>;
+
+      // Ensure label/data lengths match; pad data with zeros if necessary
+      function padArray(arr, targetLen) {
+        if (!Array.isArray(arr)) arr = [];
+        while (arr.length < targetLen) arr.push(0);
+        return arr;
+      }
+
+      if (Array.isArray(aLabels)) aData = padArray(aData, aLabels.length);
+      if (Array.isArray(dLabels)) dData = padArray(dData, dLabels.length);
+
+      var assignedChart = null;
+      var doneChart = null;
+
+      function renderCharts(){
+        if (assignedChart) { assignedChart.destroy(); assignedChart = null; }
+        if (doneChart) { doneChart.destroy(); doneChart = null; }
+
+        var assignedCanvas = document.getElementById('topAssignedChart');
+        if (assignedCanvas) {
+          assignedChart = createBarChart(assignedCanvas, aLabels, aData, 'Jumlah Ditugaskan', ['rgba(255,159,64,0.9)','rgba(255,205,86,0.9)']);
+        }
+
+        var doneCanvas = document.getElementById('topDoneChart');
+        if (doneCanvas) {
+          doneChart = createBarChart(doneCanvas, dLabels, dData, 'Jumlah Selesai', ['rgba(75,192,192,0.95)','rgba(54,162,235,0.8)']);
+        }
+      }
+
+      renderCharts();
+
+      if (mobileMq && typeof mobileMq.addEventListener === 'function') {
+        mobileMq.addEventListener('change', function(){
+          renderCharts();
         });
+      } else if (mobileMq && typeof mobileMq.addListener === 'function') {
+        // Safari/old browsers fallback
+        mobileMq.addListener(function(){ renderCharts(); });
       }
     })();
   </script>
