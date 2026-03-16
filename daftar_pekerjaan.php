@@ -18,11 +18,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tglSelesai = trim($_POST['tgl_selesai'] ?? '');
     $ditugaskan = trim($_POST['ditugaskan'] ?? '');
 
-    if ($judul === '') $errors[] = 'Judul pekerjaan wajib diisi';
-    if ($deskripsi === '') $errors[] = 'Deskripsi pekerjaan wajib diisi';
-    if ($tglMulai === '') $errors[] = 'Tanggal mulai wajib diisi';
-    if ($tglSelesai === '') $errors[] = 'Tanggal selesai wajib diisi';
-    if ($ditugaskan === '') $errors[] = 'Pilih pegawai yang ditugaskan';
+    if ($judul === '')
+        $errors[] = 'Judul pekerjaan wajib diisi';
+    if ($deskripsi === '')
+        $errors[] = 'Deskripsi pekerjaan wajib diisi';
+    if ($tglMulai === '')
+        $errors[] = 'Tanggal mulai wajib diisi';
+    if ($tglSelesai === '')
+        $errors[] = 'Tanggal selesai wajib diisi';
+    if ($ditugaskan === '')
+        $errors[] = 'Pilih pegawai yang ditugaskan';
 
 
     if (isset($conn)) {
@@ -65,7 +70,8 @@ if (isset($conn)) {
             $stmt->execute();
             $res = $stmt->get_result();
             if ($res) {
-                while ($e = $res->fetch_assoc()) $employees[] = $e;
+                while ($e = $res->fetch_assoc())
+                    $employees[] = $e;
                 $res->free();
             }
             $stmt->close();
@@ -73,7 +79,8 @@ if (isset($conn)) {
     } else {
         $r2 = $conn->query("SELECT npp, nama_emp FROM employee ORDER BY nama_emp ASC");
         if ($r2) {
-            while ($e = $r2->fetch_assoc()) $employees[] = $e;
+            while ($e = $r2->fetch_assoc())
+                $employees[] = $e;
             $r2->free();
         }
     }
@@ -93,122 +100,158 @@ if (isset($conn)) {
             </div>
 
             <style>
-            /* Custom calendar event card: improved text fitting and truncation */
-            .fc-custom-event{
-                font-family:system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-                color:var(--bs-body-color);
-                padding:8px;
-                border-radius:8px;
-                background:#fff;
-                border:1px solid rgba(0,0,0,0.04);
-                box-shadow:0 1px 0 rgba(0,0,0,0.02);
-                display:flex;
-                flex-direction:column;
-                min-height:44px;
-                overflow:hidden;
-            }
-            .fc-custom-event .fc-ce-header{
-                display:flex;
-                align-items:flex-start;
-                justify-content:space-between;
-                gap:8px;
-                min-height:28px;
-            }
-            .fc-custom-event .fc-ce-title{
-                font-weight:600;
-                font-size:14px;
-                line-height:1.15;
-                display:-webkit-box;
-                -webkit-line-clamp:2;
-                -webkit-box-orient:vertical;
-                overflow:hidden;
-                text-overflow:ellipsis;
-                word-break:break-word;
-                margin:0;
-            }
-            .fc-custom-event .fc-ce-deadline{
-                font-size:12px;
-                color:#6c757d;
-                margin-top:4px;
-            }
-            .fc-custom-event .fc-ce-desc{
-                font-size:13px;
-                color:#333;
-                margin-top:6px;
-                max-height:3.6em; /* ~2 lines */
-                overflow:hidden;
-                text-overflow:ellipsis;
-                display:-webkit-box;
-                -webkit-line-clamp:2;
-                -webkit-box-orient:vertical;
-                line-height:1.6;
-            }
-            .fc-custom-event .fc-ce-assigned{
-                font-size:12px;
-                color:#495057;
-                margin-top:8px;
-                border-top:1px dashed rgba(0,0,0,0.04);
-                padding-top:6px;
-                white-space:nowrap;
-                overflow:hidden;
-                text-overflow:ellipsis;
-            }
-            .fc-custom-event .ec-open-btn{
-                font-size:11px;
-                padding:3px 8px;
-                flex:0 0 auto;
-                white-space:nowrap;
-            }
-            /* Improve visuals in month/day grid where space is tight */
-            .fc .fc-daygrid-event .fc-custom-event{
-                padding:6px;
-                font-size:12px;
-            }
-            @media (max-width:575.98px){
-                .fc-custom-event{padding:6px;border-radius:6px}
-                .fc-custom-event .fc-ce-title{font-size:13px;}
-                .fc-custom-event .fc-ce-desc{font-size:12px;-webkit-line-clamp:2}
-                .fc-custom-event .fc-ce-assigned{font-size:11px}
-                .fc-custom-event .ec-open-btn{font-size:11px;padding:2px 6px}
-                .fc-custom-event .fc-ce-header{gap:6px}
-                .fc-custom-event .fc-ce-title{max-width:calc(100% - 70px);} /* leave space for button */
-            }
-            </style>
-            <script>
-            var currentUserNpp = '<?php echo e($npp ?? ''); ?>';
-            window.addEventListener('load', function () {
-                var el = document.getElementById('calendar');
-                if (!el || !window.FullCalendar) {
-                    console.warn('Calendar element or FullCalendar is not available.');
-                    return;
+                /* Custom calendar event card: improved text fitting and truncation */
+                .fc-custom-event {
+                    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+                    color: var(--bs-body-color);
+                    padding: 8px;
+                    border-radius: 8px;
+                    background: #fff;
+                    border: 1px solid rgba(0, 0, 0, 0.04);
+                    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.02);
+                    display: flex;
+                    flex-direction: column;
+                    min-height: 44px;
+                    overflow: hidden;
                 }
 
-                var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
-                var isMobile = viewportWidth < 576; // match CSS mobile breakpoint
-                var initialView = isMobile ? 'listWeek' : 'dayGridMonth';
-                var headerRight = isMobile ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek,listWeek';
+                .fc-custom-event .fc-ce-header {
+                    display: flex;
+                    align-items: flex-start;
+                    justify-content: space-between;
+                    gap: 8px;
+                    min-height: 28px;
+                }
 
-                function showEventDetail(ev){
-                        function escapeHtml(s){
+                .fc-custom-event .fc-ce-title {
+                    font-weight: 600;
+                    font-size: 14px;
+                    line-height: 1.15;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    word-break: break-word;
+                    margin: 0;
+                }
+
+                .fc-custom-event .fc-ce-deadline {
+                    font-size: 12px;
+                    color: #6c757d;
+                    margin-top: 4px;
+                }
+
+                .fc-custom-event .fc-ce-desc {
+                    font-size: 13px;
+                    color: #333;
+                    margin-top: 6px;
+                    max-height: 3.6em;
+                    /* ~2 lines */
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    line-height: 1.6;
+                }
+
+                .fc-custom-event .fc-ce-assigned {
+                    font-size: 12px;
+                    color: #495057;
+                    margin-top: 8px;
+                    border-top: 1px dashed rgba(0, 0, 0, 0.04);
+                    padding-top: 6px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .fc-custom-event .ec-open-btn {
+                    font-size: 11px;
+                    padding: 3px 8px;
+                    flex: 0 0 auto;
+                    white-space: nowrap;
+                }
+
+                /* Menyembunyikan isi secara visual, tapi TETAP mempertahankan tingginya */
+                .fc-custom-event.is-continuation>* {
+                    visibility: hidden;
+                }
+
+                /* Merapikan bentuk kotak kelanjutan agar terlihat menyambung dari tepi layar */
+                .fc-custom-event.is-continuation {
+                    border-left: none !important;
+                    border-top-left-radius: 0 !important;
+                    border-bottom-left-radius: 0 !important;
+                    background-color: #ffffff !important;
+                    /* <--- UBAH BAGIAN INI JADI PUTIH */
+                    box-shadow: none !important;
+                }
+
+                /* Improve visuals in month/day grid where space is tight */
+                .fc .fc-daygrid-event .fc-custom-event {
+                    padding: 6px;
+                    font-size: 12px;
+                }
+
+                @media (max-width:575.98px) {
+                    .fc-custom-event {
+                        padding: 6px;
+                        border-radius: 6px
+                    }
+
+                    .fc-custom-event .fc-ce-title {
+                        font-size: 13px;
+                    }
+
+                    .fc-custom-event .fc-ce-desc {
+                        font-size: 12px;
+                        -webkit-line-clamp: 2
+                    }
+
+                    .fc-custom-event .fc-ce-assigned {
+                        font-size: 11px
+                    }
+
+                    .fc-custom-event .ec-open-btn {
+                        font-size: 11px;
+                        padding: 2px 6px
+                    }
+
+                    .fc-custom-event .fc-ce-header {
+                        gap: 6px
+                    }
+
+                    .fc-custom-event .fc-ce-title {
+                        max-width: calc(100% - 70px);
+                    }
+
+                    /* leave space for button */
+                }
+            </style>
+            <script>
+                var currentUserNpp = '<?php echo e($npp ?? ''); ?>';
+                window.addEventListener('load', function () {
+                    var el = document.getElementById('calendar');
+                    if (!el || !window.FullCalendar) {
+                        console.warn('Calendar element or FullCalendar is not available.');
+                        return;
+                    }
+
+                    var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+                    var isMobile = viewportWidth < 576; // match CSS mobile breakpoint
+                    var initialView = isMobile ? 'listWeek' : 'dayGridMonth';
+                    var headerRight = isMobile ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek,listWeek';
+
+                    function showEventDetail(ev) {
+                        function escapeHtml(s) {
                             return String(s ?? '')
                                 .replace(/&/g, '&amp;')
                                 .replace(/</g, '&lt;')
                                 .replace(/>/g, '&gt;')
                                 .replace(/"/g, '&quot;')
                                 .replace(/'/g, '&#039;');
-                        }
-                        function formatDateId(yyyyMmDd){
-                            if (!yyyyMmDd) return '-';
-                            var d = new Date(yyyyMmDd + 'T00:00:00');
-                            if (isNaN(d.getTime())) return String(yyyyMmDd);
-                            return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).format(d);
-                        }
-                        function formatDateTimeId(dateTimeStr){
-                            if (!dateTimeStr) return '-';
-                            var s = String(dateTimeStr).replace(' ', 'T');
-                            var d = new Date(s);
-                            if (isNaN(d.getTime())) return String(dateTimeStr);
-                            return new Intl.DateTimeFormat('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(d);
                         }
 
                         var props = ev.extendedProps || {};
@@ -223,8 +266,8 @@ if (isset($conn)) {
 
                         var assignedLabel = assigned ? (assignedName ? (assignedName + ' (' + assigned + ')') : assigned) : '-';
                         var reporterLabel = reporter ? reporter : '-';
-                        var mulaiText = formatDateId(tglMulai);
-                        var selesaiText = formatDateId(tglSelesai);
+                        var mulaiText = tglMulai;
+                        var selesaiText = tglSelesai;
                         var tanggalText = tglSelesai ? (mulaiText + ' — ' + selesaiText) : mulaiText;
 
                         var titleEl = document.getElementById('pj_detail_title');
@@ -244,7 +287,7 @@ if (isset($conn)) {
                         var statusText = status ? status : '-';
                         if (statusEl) {
                             statusEl.textContent = statusText;
-                            statusEl.classList.remove('text-bg-secondary','text-bg-primary','text-bg-success');
+                            statusEl.classList.remove('text-bg-secondary', 'text-bg-primary', 'text-bg-success');
                             if (status === 'done') statusEl.classList.add('text-bg-success');
                             else if (status && status !== '-') statusEl.classList.add('text-bg-primary');
                             else statusEl.classList.add('text-bg-secondary');
@@ -252,11 +295,11 @@ if (isset($conn)) {
 
                         if (assignedEl) assignedEl.textContent = assignedLabel;
                         if (reporterEl) reporterEl.textContent = reporterLabel;
-                        if (descEl) descEl.innerHTML = desc ? escapeHtml(desc).replace(/\n/g,'<br>') : '<span class="text-body-secondary">-</span>';
+                        if (descEl) descEl.innerHTML = desc ? escapeHtml(desc).replace(/\n/g, '<br>') : '<span class="text-body-secondary">-</span>';
 
                         if (alertEl) {
                             alertEl.classList.add('d-none');
-                            alertEl.classList.remove('alert-success','alert-danger');
+                            alertEl.classList.remove('alert-success', 'alert-danger');
                             alertEl.textContent = '';
                         }
 
@@ -269,7 +312,7 @@ if (isset($conn)) {
 
                         if (doneRow && doneAtEl) {
                             if (status === 'done' && doneAt) {
-                                doneAtEl.textContent = formatDateTimeId(doneAt);
+                                doneAtEl.textContent = doneAt;
                                 doneRow.classList.remove('d-none');
                             } else {
                                 doneAtEl.textContent = '-';
@@ -280,87 +323,116 @@ if (isset($conn)) {
                         if (window.openPekerjaanDetailModal) {
                             window.openPekerjaanDetailModal();
                         }
-                }
+                    }
 
-                var calendar = new FullCalendar.Calendar(el, {
-                    initialView: initialView,
-                    customButtons: {
-                        addPekerjaan: { text: 'Tambah Pekerjaan', click: function(){ window.openPekerjaanModal(); } }
-                    },
-                    headerToolbar: { left: 'prev,next today addPekerjaan', center: 'title', right: headerRight },
-                    events: '<?php echo site_url("api/events_pekerjaan.php"); ?>',
-                    displayEventTime: false,
-                    height: 'auto',
-                    expandRows: true,
-                    dayMaxEventRows: 3,
-                    locale: 'id',
-                    buttonText: {
-                        today: 'Hari ini',
-                        month: 'Bulan',
-                        week: 'Minggu',
-                        list: 'Daftar'
-                    },
-                    navLinks: true,
-                    stickyHeaderDates: true,
-                    dateClick: function(info){
-                        if (typeof window.openPekerjaanModal === 'function'){
-                            window.openPekerjaanModal(info.dateStr);
-                        }
-                    },
-                    eventClick: function(info){ showEventDetail(info.event); },
-                    eventContent: function(arg){
-                        function escapeHtml(s){ return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
-                                                var ev = arg.event;
-                                                var props = ev.extendedProps || {};
-                                                var title = ev.title || '';
-                                                var tgl = props.tgl_selesai || props.tgl_mulai || '';
-                                                var desc = props.description || '';
-                                                var assigned = (props.assigned_name ? (props.assigned_name + ' (' + (props.ditugaskan||'') + ')') : (props.ditugaskan || '')) || '-';
+                    var calendar = new FullCalendar.Calendar(el, {
+                        initialView: initialView,
+                        customButtons: {
+                            addPekerjaan: { text: 'Tambah Pekerjaan', click: function () { window.openPekerjaanModal(); } }
+                        },
+                        headerToolbar: { left: 'prev,next today addPekerjaan', center: 'title', right: headerRight },
+                        events: '<?php echo site_url("api/events_pekerjaan.php"); ?>',
+                        displayEventTime: false,
+                        height: 'auto',
+                        expandRows: true,
+                        dayMaxEventRows: 3,
+                        locale: 'id',
+                        displayEventEnd: true,
+                        nextDayThreshold: '00:00:00',
+                        buttonText: {
+                            today: 'Hari ini',
+                            month: 'Bulan',
+                            week: 'Minggu',
+                            list: 'Daftar'
+                        },
+                        navLinks: true,
+                        stickyHeaderDates: true,
+                        dateClick: function (info) {
+                            if (typeof window.openPekerjaanModal === 'function') {
+                                window.openPekerjaanModal(info.dateStr);
+                            }
+                        },
+                        eventClick: function (info) { showEventDetail(info.event); },
+                        eventContent: function (arg) {
+                            function escapeHtml(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
 
-                                                function humanizeStatus(s){
-                                                        if (!s) return '';
-                                                        try{ return String(s).replace(/_/g,' ').replace(/\b\w/g, function(c){ return c.toUpperCase(); }); }catch(e){return String(s);} 
-                                                }
-                                                var btnLabel = props.status ? humanizeStatus(props.status) : 'Open';
-                                                var statusVal = (props.status || '').toString().toLowerCase();
-                                                var isDone = (statusVal === 'done' || statusVal === 'selesai' || statusVal === 'completed');
-                                                var btnClass = isDone ? 'btn btn-sm btn-success ec-open-btn' : (props.status ? 'btn btn-sm btn-primary ec-open-btn' : 'btn btn-sm btn-outline-primary ec-open-btn');
-                                                var btnAttrs = isDone ? ' disabled' : '';
+                            var ev = arg.event;
+                            var props = ev.extendedProps || {};
+                            var title = ev.title || '';
+                            // Prefer server-formatted dates from extendedProps (provided by API)
+                            var tgl = props.tgl_selesai_fmt || props.tgl_mulai_fmt || props.tgl_selesai || props.tgl_mulai || '';
+                            var desc = props.description || '';
+                            var assigned = (props.assigned_name ? (props.assigned_name + ' (' + (props.ditugaskan || '') + ')') : (props.ditugaskan || '')) || '-';
 
-                                                var viewType = (arg.view && arg.view.type) ? String(arg.view.type) : '';
-                                                var includeTitle = !viewType.startsWith('list');
+                            function humanizeStatus(s) {
+                                if (!s) return '';
+                                try { return String(s).replace(/_/g, ' ').replace(/\b\w/g, function (c) { return c.toUpperCase(); }); } catch (e) { return String(s); }
+                            }
+                            var btnLabel = props.status ? humanizeStatus(props.status) : 'Open';
+                            var statusVal = (props.status || '').toString().toLowerCase();
+                            var isDone = (statusVal === 'done' || statusVal === 'selesai' || statusVal === 'completed');
+                            var btnClass = isDone ? 'btn btn-sm btn-success ec-open-btn' : (props.status ? 'btn btn-sm btn-primary ec-open-btn' : 'btn btn-sm btn-outline-primary ec-open-btn');
+                            var btnAttrs = isDone ? ' disabled' : '';
 
-                                                var html = '<div class="fc-custom-event">';
-                                                if (includeTitle) {
-                                                        html += '<div class="fc-ce-header"><div class="fc-ce-title">'+escapeHtml(title)+'</div>'
-                                                                 + '<div><button type="button" class="' + btnClass + '" data-eid="'+escapeHtml(ev.id)+'"' + btnAttrs + '>'+escapeHtml(btnLabel)+'</button></div></div>';
-                                                } else {
-                                                        // In list views FullCalendar already shows the title; avoid repeating it.
-                                                        html += '<div class="fc-ce-header-compact"><div><button type="button" class="' + btnClass + '" data-eid="'+escapeHtml(ev.id)+'"' + btnAttrs + '>'+escapeHtml(btnLabel)+'</button></div></div>';
-                                                }
-                                                html += (tgl ? ('<div class="fc-ce-deadline">'+escapeHtml(tgl)+'</div>') : '');
-                                                html += (desc ? ('<div class="fc-ce-desc">'+escapeHtml(desc)+'</div>') : '');
-                                                html += '<div class="fc-ce-assigned">'+escapeHtml(assigned)+'</div>';
-                                                html += '</div>';
-                                                return { html: html };
-                    },
-                    eventDidMount: function(info){
-                        try {
-                            var btn = info.el.querySelector('.ec-open-btn');
-                            if (btn){ btn.addEventListener('click', function(e){ e.stopPropagation(); showEventDetail(info.event); }); }
-                        } catch (e){}
-                    },
-                    views: {
-                        dayGridMonth: { dayMaxEventRows: 3 },
-                        listWeek: { noEventMessage: 'Tidak ada pekerjaan minggu ini' }
-                    },
-                    eventDisplay: 'block'
+                            // Deteksi apakah ini potongan di minggu berikutnya
+                            var isContinuation = !arg.isStart;
+
+                            // Tambahkan class khusus jika ini adalah potongan kelanjutan
+                            var wrapperClass = isContinuation ? 'fc-custom-event is-continuation' : 'fc-custom-event';
+
+                            // RENDER SEMUA ELEMEN SAMA PERSIS agar tingginya tetap stabil
+                            var html = '<div class="' + wrapperClass + '">';
+                            html += '<div class="fc-ce-header"><div><div class="fc-ce-title">' + escapeHtml(title) + '</div></div>'
+                                + '<div><button type="button" class="' + btnClass + '" data-eid="' + escapeHtml(ev.id) + '"' + btnAttrs + '>' + escapeHtml(btnLabel) + '</button></div></div>';
+                            html += (tgl ? ('<div class="fc-ce-deadline">' + escapeHtml(tgl) + '</div>') : '');
+                            html += (desc ? ('<div class="fc-ce-desc">' + escapeHtml(desc) + '</div>') : '');
+                            html += '<div class="fc-ce-assigned">' + escapeHtml(assigned) + '</div>';
+                            html += '</div>';
+
+                            return { html: html };
+                        },
+                        eventDidMount: function (info) {
+                            try {
+                                var btn = info.el.querySelector('.ec-open-btn');
+                                if (btn) {
+                                    btn.addEventListener('click', function (e) {
+                                        e.stopPropagation();
+                                        showEventDetail(info.event);
+                                    });
+                                }
+
+                                // CSS tambahan agar kotak event kelanjutan tidak memiliki border kiri/kanan
+                                // sehingga terlihat seperti satu kesatuan bar panjang
+                                if (!info.isStart) {
+                                    var customEventEl = info.el.querySelector('.fc-custom-event');
+                                    if (customEventEl) {
+                                        customEventEl.style.borderLeft = 'none';
+                                        customEventEl.style.borderTopLeftRadius = '0';
+                                        customEventEl.style.borderBottomLeftRadius = '0';
+                                    }
+                                }
+                                if (!info.isEnd) {
+                                    var customEventEl = info.el.querySelector('.fc-custom-event');
+                                    if (customEventEl) {
+                                        customEventEl.style.borderRight = 'none';
+                                        customEventEl.style.borderTopRightRadius = '0';
+                                        customEventEl.style.borderBottomRightRadius = '0';
+                                    }
+                                }
+
+                            } catch (e) { console.error(e); }
+                        },
+                        views: {
+                            dayGridMonth: { dayMaxEventRows: 3 },
+                            listWeek: { noEventMessage: 'Tidak ada pekerjaan minggu ini' }
+                        },
+                        eventDisplay: 'block'
+                    });
+                    calendar.render();
+                    window.pekerjaanCalendar = calendar;
+
+                    if (isMobile) el.classList.add('mobile-calendar');
                 });
-                calendar.render();
-                window.pekerjaanCalendar = calendar;
-
-                if (isMobile) el.classList.add('mobile-calendar');
-            });
             </script>
 
             <?php if (!empty($errors)): ?>
@@ -370,218 +442,225 @@ if (isset($conn)) {
                 </div>
             <?php endif; ?>
 
-                        <!-- Form removed: use calendar modal to create tasks -->
+            <!-- Form removed: use calendar modal to create tasks -->
 
-                        <!-- Modal for creating pekerjaan -->
-                        <div class="modal fade" id="pekerjaanModal" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Buat Pekerjaan</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Modal for creating pekerjaan -->
+            <div class="modal fade" id="pekerjaanModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Buat Pekerjaan</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="pekerjaanForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Judul</label>
+                                    <input name="judul" id="pj_judul" class="form-control form-control-lg" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Deskripsi</label>
+                                    <textarea name="deskripsi" id="pj_deskripsi" class="form-control form-control-lg"
+                                        rows="4" required></textarea>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label">Tanggal Mulai</label>
+                                        <input type="date" name="tgl_mulai" id="pj_mulai"
+                                            class="form-control form-control-lg" required>
                                     </div>
-                                    <div class="modal-body">
-                                        <form id="pekerjaanForm">
-                                            <div class="mb-3">
-                                                <label class="form-label">Judul</label>
-                                                <input name="judul" id="pj_judul" class="form-control form-control-lg" required>
-                                            </div>
-                                            <div class="mb-3">
-                                                    <label class="form-label">Deskripsi</label>
-                                                <textarea name="deskripsi" id="pj_deskripsi" class="form-control form-control-lg" rows="4" required></textarea>
-                                            </div>
-                                            <div class="row g-3">
-                                                <div class="col-12 col-md-6">
-                                                    <label class="form-label">Tanggal Mulai</label>
-                                                    <input type="date" name="tgl_mulai" id="pj_mulai" class="form-control form-control-lg" required>
-                                                </div>
-                                                <div class="col-12 col-md-6">
-                                                    <label class="form-label">Tanggal Selesai</label>
-                                                    <input type="date" name="tgl_selesai" id="pj_selesai" class="form-control form-control-lg" required>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">Ditugaskan ke</label>
-                                                <select name="ditugaskan" id="pj_ditugaskan" class="form-select form-select-lg" required>
-                                                    <option value="">-- Pilih Pegawai --</option>
-                                                    <?php foreach ($employees as $emp): ?>
-                                                        <option value="<?php echo e($emp['npp']); ?>"><?php echo e($emp['nama_emp']); ?> (<?php echo e($emp['npp']); ?>)</option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                            </div>
-                                            <!-- <div class="mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label">Tanggal Selesai</label>
+                                        <input type="date" name="tgl_selesai" id="pj_selesai"
+                                            class="form-control form-control-lg" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Ditugaskan ke</label>
+                                    <select name="ditugaskan" id="pj_ditugaskan" class="form-select form-select-lg"
+                                        required>
+                                        <option value="">-- Pilih Pegawai --</option>
+                                        <?php foreach ($employees as $emp): ?>
+                                            <option value="<?php echo e($emp['npp']); ?>"><?php echo e($emp['nama_emp']); ?>
+                                                (<?php echo e($emp['npp']); ?>)</option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <!-- <div class="mb-3">
                                                 <label class="form-label">Dilaporkan Oleh</label>
                                                 <input class="form-control" value="<?php echo e($nama_emp ?? $npp ?? ''); ?>" disabled>
                                             </div> -->
-                                        </form>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                                        <button type="button" id="pj_save" class="btn btn-primary">Simpan</button>
-                                    </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button type="button" id="pj_save" class="btn btn-primary">Simpan</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal detail pekerjaan (custom, mirip task app) -->
+            <div class="modal fade" id="pekerjaanDetailModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <div class="w-100">
+                                <h5 class="modal-title mb-1" id="pj_detail_title">Detail Pekerjaan</h5>
+                                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                    <div class="text-body-secondary" id="pj_detail_tanggal">-</div>
+                                    <span class="badge text-bg-secondary" id="pj_detail_status">-</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="pj_detail_alert" class="alert d-none" role="alert"></div>
+
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item px-0">
+                                    <div class="text-uppercase text-body-secondary small">Ditugaskan</div>
+                                    <div class="fw-semibold" id="pj_detail_assigned">-</div>
+                                </div>
+                                <div class="list-group-item px-0">
+                                    <div class="text-uppercase text-body-secondary small">Koordinator</div>
+                                    <div class="fw-semibold" id="pj_detail_reporter">-</div>
+                                </div>
+                                <div class="list-group-item px-0">
+                                    <div class="text-uppercase text-body-secondary small">Deskripsi</div>
+                                    <div id="pj_detail_desc" class="mt-1">-</div>
+                                </div>
+                                <div class="list-group-item px-0" id="pj_detail_done_row">
+                                    <div class="text-uppercase text-body-secondary small">Waktu Tugas Selesai</div>
+                                    <div class="fw-semibold" id="pj_detail_done_at">-</div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Modal detail pekerjaan (custom, mirip task app) -->
-                        <div class="modal fade" id="pekerjaanDetailModal" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-lg modal-dialog-centered modal-fullscreen-sm-down">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <div class="w-100">
-                                            <h5 class="modal-title mb-1" id="pj_detail_title">Detail Pekerjaan</h5>
-                                            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                                                <div class="text-body-secondary" id="pj_detail_tanggal">-</div>
-                                                <span class="badge text-bg-secondary" id="pj_detail_status">-</span>
-                                            </div>
-                                        </div>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div id="pj_detail_alert" class="alert d-none" role="alert"></div>
-
-                                        <div class="list-group list-group-flush">
-                                            <div class="list-group-item px-0">
-                                                <div class="text-uppercase text-body-secondary small">Ditugaskan</div>
-                                                <div class="fw-semibold" id="pj_detail_assigned">-</div>
-                                            </div>
-                                            <div class="list-group-item px-0">
-                                                <div class="text-uppercase text-body-secondary small">Koordinator</div>
-                                                <div class="fw-semibold" id="pj_detail_reporter">-</div>
-                                            </div>
-                                            <div class="list-group-item px-0">
-                                                <div class="text-uppercase text-body-secondary small">Deskripsi</div>
-                                                <div id="pj_detail_desc" class="mt-1">-</div>
-                                            </div>
-                                            <div class="list-group-item px-0" id="pj_detail_done_row">
-                                                <div class="text-uppercase text-body-secondary small">Waktu Tugas Selesai</div>
-                                                <div class="fw-semibold" id="pj_detail_done_at">-</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
-                                        <button type="button" class="btn btn-primary d-none" id="pj_detail_done">Tandai Selesai</button>
-                                    </div>
-                                </div>
-                            </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">Tutup</button>
+                            <button type="button" class="btn btn-primary d-none" id="pj_detail_done">Tandai
+                                Selesai</button>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        <script>
-                        // handle opening modal from calendar and submitting via fetch
-                        (function(){
-                                var modalEl = document.getElementById('pekerjaanModal');
-                                var bsModal = null;
-                                function ensureModal(){
-                                        if (!bsModal && window.bootstrap && modalEl) bsModal = new bootstrap.Modal(modalEl);
-                                        return bsModal;
+            <script>
+                // handle opening modal from calendar and submitting via fetch
+                (function () {
+                    var modalEl = document.getElementById('pekerjaanModal');
+                    var bsModal = null;
+                    function ensureModal() {
+                        if (!bsModal && window.bootstrap && modalEl) bsModal = new bootstrap.Modal(modalEl);
+                        return bsModal;
+                    }
+
+                    var detailModalEl = document.getElementById('pekerjaanDetailModal');
+                    var bsDetailModal = null;
+                    function ensureDetailModal() {
+                        if (!bsDetailModal && window.bootstrap && detailModalEl) bsDetailModal = new bootstrap.Modal(detailModalEl);
+                        return bsDetailModal;
+                    }
+
+                    window.openPekerjaanDetailModal = function () {
+                        ensureDetailModal();
+                        if (bsDetailModal) bsDetailModal.show();
+                    };
+
+                    // expose helper to calendar dateClick
+                    window.openPekerjaanModal = function (dateStr) {
+                        ensureModal();
+                        document.getElementById('pj_mulai').value = dateStr || '';
+                        document.getElementById('pj_selesai').value = '';
+                        document.getElementById('pj_judul').value = '';
+                        document.getElementById('pj_deskripsi').value = '';
+                        if (bsModal) bsModal.show();
+                        setTimeout(function () {
+                            var el = document.getElementById('pj_judul');
+                            if (el) el.focus();
+                        }, 300);
+                    };
+
+                    // submit handler
+                    document.getElementById('pj_save').addEventListener('click', function () {
+                        var form = document.getElementById('pekerjaanForm');
+                        // client-side validation: use HTML5 constraint validation
+                        if (!form.checkValidity()) {
+                            form.reportValidity();
+                            return;
+                        }
+                        var fd = new FormData(form);
+                        fetch('<?php echo site_url("api/create_pekerjaan.php"); ?>', { method: 'POST', body: fd, credentials: 'same-origin' })
+                            .then(function (res) { return res.json(); })
+                            .then(function (json) {
+                                if (json && json.success) {
+                                    if (bsModal) bsModal.hide();
+                                    if (window.Swal) Swal.fire({ icon: 'success', title: 'Tersimpan', text: json.message || 'Pekerjaan tersimpan' });
+                                    // refetch events if calendar present
+                                    if (window.pekerjaanCalendar && typeof window.pekerjaanCalendar.refetchEvents === 'function') {
+                                        window.pekerjaanCalendar.refetchEvents();
+                                    } else {
+                                        // fallback reload
+                                        setTimeout(function () { location.reload(); }, 700);
+                                    }
+                                } else {
+                                    if (window.Swal) Swal.fire({ icon: 'error', title: 'Gagal', text: json.message || 'Gagal menyimpan' });
                                 }
+                            }).catch(function (err) {
+                                console.error(err);
+                                if (window.Swal) Swal.fire({ icon: 'error', title: 'Error', text: 'Terjadi error saat menyimpan.' });
+                            });
+                    });
 
-                            var detailModalEl = document.getElementById('pekerjaanDetailModal');
-                            var bsDetailModal = null;
-                            function ensureDetailModal(){
-                                if (!bsDetailModal && window.bootstrap && detailModalEl) bsDetailModal = new bootstrap.Modal(detailModalEl);
-                                return bsDetailModal;
+                    // mark done handler (detail modal)
+                    var doneBtn = document.getElementById('pj_detail_done');
+                    if (doneBtn) {
+                        doneBtn.addEventListener('click', function () {
+                            var id = this.dataset.id;
+                            if (!id) return;
+
+                            var alertEl = document.getElementById('pj_detail_alert');
+                            function showAlert(kind, text) {
+                                if (!alertEl) return;
+                                alertEl.classList.remove('d-none', 'alert-success', 'alert-danger');
+                                alertEl.classList.add(kind === 'success' ? 'alert-success' : 'alert-danger');
+                                alertEl.textContent = text;
                             }
 
-                            window.openPekerjaanDetailModal = function(){
-                                ensureDetailModal();
-                                if (bsDetailModal) bsDetailModal.show();
-                            };
-
-                                // expose helper to calendar dateClick
-                                window.openPekerjaanModal = function(dateStr){
-                                    ensureModal();
-                                    document.getElementById('pj_mulai').value = dateStr || '';
-                                    document.getElementById('pj_selesai').value = '';
-                                    document.getElementById('pj_judul').value = '';
-                                    document.getElementById('pj_deskripsi').value = '';
-                                    if (bsModal) bsModal.show();
-                                    setTimeout(function(){
-                                        var el = document.getElementById('pj_judul');
-                                        if (el) el.focus();
-                                    }, 300);
-                                };
-
-                                // submit handler
-                            document.getElementById('pj_save').addEventListener('click', function(){
-                                var form = document.getElementById('pekerjaanForm');
-                                    // client-side validation: use HTML5 constraint validation
-                                    if (!form.checkValidity()) {
-                                        form.reportValidity();
-                                        return;
-                                    }
-                                    var fd = new FormData(form);
-                                            fetch('<?php echo site_url("api/create_pekerjaan.php"); ?>', { method: 'POST', body: fd, credentials: 'same-origin' })
-                                        .then(function(res){ return res.json(); })
-                                        .then(function(json){
-                                                if (json && json.success){
-                                                        if (bsModal) bsModal.hide();
-                                                        if (window.Swal) Swal.fire({icon:'success', title:'Tersimpan', text: json.message || 'Pekerjaan tersimpan'});
-                                                        // refetch events if calendar present
-                                                        if (window.pekerjaanCalendar && typeof window.pekerjaanCalendar.refetchEvents === 'function'){
-                                                                window.pekerjaanCalendar.refetchEvents();
-                                                        } else {
-                                                                // fallback reload
-                                                                setTimeout(function(){ location.reload(); }, 700);
-                                                        }
-                                                } else {
-                                                        if (window.Swal) Swal.fire({icon:'error', title:'Gagal', text: json.message || 'Gagal menyimpan'});
-                                                }
-                                        }).catch(function(err){
-                                                console.error(err);
-                                                if (window.Swal) Swal.fire({icon:'error', title:'Error', text: 'Terjadi error saat menyimpan.'});
-                                        });
-                                });
-
-                                // mark done handler (detail modal)
-                                var doneBtn = document.getElementById('pj_detail_done');
-                                if (doneBtn) {
-                                    doneBtn.addEventListener('click', function(){
-                                        var id = this.dataset.id;
-                                        if (!id) return;
-
-                                        var alertEl = document.getElementById('pj_detail_alert');
-                                        function showAlert(kind, text){
-                                            if (!alertEl) return;
-                                            alertEl.classList.remove('d-none','alert-success','alert-danger');
-                                            alertEl.classList.add(kind === 'success' ? 'alert-success' : 'alert-danger');
-                                            alertEl.textContent = text;
+                            this.disabled = true;
+                            fetch('<?php echo site_url("api/mark_done.php"); ?>', {
+                                method: 'POST',
+                                credentials: 'same-origin',
+                                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                                body: new URLSearchParams({ id: id })
+                            })
+                                .then(r => r.json())
+                                .then(function (json) {
+                                    if (json && json.success) {
+                                        showAlert('success', 'Berhasil ditandai selesai.');
+                                        var statusEl = document.getElementById('pj_detail_status');
+                                        if (statusEl) {
+                                            statusEl.textContent = 'done';
+                                            statusEl.classList.remove('text-bg-secondary', 'text-bg-primary');
+                                            statusEl.classList.add('text-bg-success');
                                         }
-
-                                        this.disabled = true;
-                                        fetch('<?php echo site_url("api/mark_done.php"); ?>', {
-                                            method: 'POST',
-                                            credentials: 'same-origin',
-                                            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                                            body: new URLSearchParams({ id: id })
-                                        })
-                                        .then(r => r.json())
-                                        .then(function(json){
-                                            if (json && json.success){
-                                                showAlert('success', 'Berhasil ditandai selesai.');
-                                                var statusEl = document.getElementById('pj_detail_status');
-                                                if (statusEl) {
-                                                    statusEl.textContent = 'done';
-                                                    statusEl.classList.remove('text-bg-secondary','text-bg-primary');
-                                                    statusEl.classList.add('text-bg-success');
-                                                }
-                                                doneBtn.classList.add('d-none');
-                                                if (window.pekerjaanCalendar) window.pekerjaanCalendar.refetchEvents();
-                                            } else {
-                                                showAlert('error', (json && json.message) ? json.message : 'Gagal memperbarui.');
-                                                doneBtn.disabled = false;
-                                            }
-                                        })
-                                        .catch(function(err){
-                                            console.error(err);
-                                            showAlert('error', 'Terjadi kesalahan.');
-                                            doneBtn.disabled = false;
-                                        });
-                                    });
-                                }
-                        })();
-                        </script>
+                                        doneBtn.classList.add('d-none');
+                                        if (window.pekerjaanCalendar) window.pekerjaanCalendar.refetchEvents();
+                                    } else {
+                                        showAlert('error', (json && json.message) ? json.message : 'Gagal memperbarui.');
+                                        doneBtn.disabled = false;
+                                    }
+                                })
+                                .catch(function (err) {
+                                    console.error(err);
+                                    showAlert('error', 'Terjadi kesalahan.');
+                                    doneBtn.disabled = false;
+                                });
+                        });
+                    }
+                })();
+            </script>
 
             <!-- <div class="card">
                 <div class="card-header">Pekerjaan Terbaru</div>
@@ -609,9 +688,9 @@ if (isset($conn)) {
                                             <td><?php echo e($r['id']); ?></td>
                                             <td><?php echo e($r['judul']); ?></td>
                                             <td><?php echo e(mb_strimwidth($r['deskripsi'], 0, 120, '...')); ?></td>
-                                            <td><?php echo e($r['tgl_selesai'] ?? ''); ?></td>
+                                            <td><?php echo e(($r['tgl_selesai'] ?? '') ? format_date_id($r['tgl_selesai']) : '-'); ?></td>
                                             <td><?php echo e($r['nama_emp'] ?: $r['npp']); ?></td>
-                                            <td><?php echo e($r['created_at']); ?></td>
+                                            <td><?php echo e(format_datetime_id($r['created_at'])); ?></td>
                                         </tr>
                                     <?php endforeach; endif; ?>
                             </tbody>

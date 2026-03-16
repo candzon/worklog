@@ -118,3 +118,33 @@ function render_flash_swal() {
     $json = json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
     echo "<script>document.addEventListener('DOMContentLoaded', function(){ if(window.Swal){ Swal.fire($json); } else { console.warn('SweetAlert not loaded'); } });</script>";
 }
+
+// Format a date string YYYY-MM-DD to "YYYY MonthName DD" in Indonesian
+function format_date_id($yyyyMmDd)
+{
+    if (empty($yyyyMmDd)) return '-';
+    $ts = strtotime($yyyyMmDd);
+    if ($ts === false) return $yyyyMmDd;
+    $months = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+    $year = date('Y', $ts);
+    $month = (int)date('n', $ts);
+    $day = date('j', $ts);
+    $mname = $months[$month] ?? date('F', $ts);
+    return $year . ' ' . $mname . ' ' . $day;
+}
+
+// Format a datetime string to a readable Indonesian datetime (e.g. "15 Feb 2026 14:30")
+function format_datetime_id($dateTimeStr)
+{
+    if (empty($dateTimeStr)) return '-';
+    $ts = strtotime($dateTimeStr);
+    if ($ts === false) return $dateTimeStr;
+    // short month names in Indonesian
+    $months = [1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun', 7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des'];
+    $day = date('d', $ts);
+    $month = (int)date('n', $ts);
+    $year = date('Y', $ts);
+    $time = date('H:i', $ts);
+    $mname = $months[$month] ?? date('M', $ts);
+    return $day . ' ' . $mname . ' ' . $year . ' ' . $time;
+}

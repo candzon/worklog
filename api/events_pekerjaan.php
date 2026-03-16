@@ -68,7 +68,11 @@ if (isset($conn)) {
                     'reporter_name' => $r['reporter_name'],
                     'tgl_mulai' => $r['tgl_mulai'],
                     'tgl_selesai' => $r['tgl_selesai'],
+                    // formatted date strings (use PHP helpers)
+                    'tgl_mulai_fmt' => (!empty($r['tgl_mulai']) ? format_date_id($r['tgl_mulai']) : ''),
+                    'tgl_selesai_fmt' => (!empty($r['tgl_selesai']) ? format_date_id($r['tgl_selesai']) : ''),
                     'done_at' => $r['updated_at'] ?? null,
+                    'created_at_fmt' => (!empty($r['created_at']) ? format_datetime_id($r['created_at']) : ''),
                 ],
             ];
 
