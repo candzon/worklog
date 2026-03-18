@@ -119,6 +119,47 @@ function render_flash_swal() {
     echo "<script>document.addEventListener('DOMContentLoaded', function(){ if(window.Swal){ Swal.fire($json); } else { console.warn('SweetAlert not loaded'); } });</script>";
 }
 
+// Role helpers
+function get_current_role_name($conn = null) {
+    ensure_session_started();
+    $roleId = $_SESSION['role_id'] ?? null;
+    $npp = $_SESSION['npp'] ?? null;
+    $roleName = null;
+
+    if (!isset($conn) || !$conn) {
+        return null;
+    }
+
+    if (!empty($roleId)) {
+        $stmt = $conn->prepare('SELECT name FROM roles WHERE id = ? LIMIT 1');
+        if ($stmt) {
+            $rid = (int) $roleId;
+            $stmt->bind_param('i', $rid);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $roleName = $row['name'] ?? null;
+            $stmt->close();
+        }
+    } elseif (!empty($npp)) {
+        $stmt = $conn->prepare('SELECT r.name FROM employee e LEFT JOIN roles r ON e.role_id = r.id WHERE e.npp = ? LIMIT 1');
+        if ($stmt) {
+            $stmt->bind_param('s', $npp);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            $row = $res ? $res->fetch_assoc() : null;
+            $roleName = $row['name'] ?? null;
+            $stmt->close();
+        }
+    }
+
+    return $roleName;
+}
+
+function role_is($roleName, $expected) {
+    return strtolower(trim((string) $roleName)) === strtolower(trim((string) $expected));
+}
+
 // Format a date string YYYY-MM-DD to "YYYY MonthName DD" in Indonesian
 function format_date_id($yyyyMmDd)
 {
