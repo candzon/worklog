@@ -12,6 +12,12 @@ $nama_emp = $_SESSION['nama_emp'] ?? null;
 
 $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $roleName = function_exists('get_current_role_name') ? get_current_role_name($conn ?? null) : null;
+    $isManager = function_exists('role_is') ? role_is($roleName, 'manager') : (strtolower((string) $roleName) === 'manager');
+    if (!$isManager) {
+        $errors[] = 'Hanya role manager yang dapat membuat pekerjaan baru.';
+    }
+
     $judul = trim($_POST['judul'] ?? '');
     $deskripsi = trim($_POST['deskripsi'] ?? '');
     $tglMulai = trim($_POST['tgl_mulai'] ?? '');
@@ -32,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Pilih pegawai yang ditugaskan';
 
 
-    if (isset($conn)) {
+    if (empty($errors) && isset($conn)) {
         $stmt = $conn->prepare("INSERT INTO pekerjaan (judul, deskripsi, created_by_npp, nama_emp, tgl_mulai, tgl_selesai, assigned_to_npp, master_tugas_id, periode) VALUES (?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?,''), NULLIF(?,''))");
         if ($stmt) {
             $stmt->bind_param('sssssssss', $judul, $deskripsi, $npp, $nama_emp, $tglMulai, $tglSelesai, $assigned_to_npp, $master_tugas_id, $periode);
@@ -273,12 +279,15 @@ if (isset($conn)) {
                         var assigned = props.ditugaskan || '';
                         var assignedName = props.assigned_name || '';
                         var reporter = props.reporter_name || props.reporter_npp || '';
+                        var reporterRole = (props.reporter_role || '').toString();
                         var tglMulai = props.tgl_mulai || ev.startStr || '';
                         var tglSelesai = props.tgl_selesai || '';
                         var doneAt = props.done_at || '';
 
                         var assignedLabel = assigned ? (assignedName ? (assignedName + ' (' + assigned + ')') : assigned) : '-';
+                        if (!reporter && reporterRole.toLowerCase() === 'manager') reporter = 'Manager';
                         var reporterLabel = reporter ? reporter : '-';
+                        if (reporterLabel !== '-' && reporterRole) reporterLabel = reporterLabel + ' (' + reporterRole + ')';
                         var mulaiText = tglMulai;
                         var selesaiText = tglSelesai;
                         var tanggalText = tglSelesai ? (mulaiText + ' — ' + selesaiText) : mulaiText;
@@ -316,9 +325,14 @@ if (isset($conn)) {
                             alertEl.textContent = '';
                         }
 
+                        var isMaster = !!props.is_master;
                         var canDone = currentUserNpp && assigned && assigned === currentUserNpp && status !== 'done';
                         if (doneBtn) {
                             doneBtn.dataset.id = ev.id;
+                            doneBtn.dataset.isMaster = isMaster ? '1' : '';
+                            doneBtn.dataset.masterId = (props.master_tugas_id != null) ? String(props.master_tugas_id) : '';
+                            doneBtn.dataset.occDate = props.tgl_mulai || ev.startStr || '';
+                            doneBtn.dataset.occToken = props.occ_token || '';
                             doneBtn.disabled = false;
                             doneBtn.classList.toggle('d-none', !canDone);
                         }
@@ -477,10 +491,14 @@ if (isset($conn)) {
                                         rows="4" required></textarea>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Ditugaskan (dari Master)</label>
-                                    <input type="text" id="pj_assigned_label" class="form-control" value="" readonly>
+                                    <label class="form-label">Ditugaskan ke</label>
+                                    <select name="assigned_to_npp" id="pj_ditugaskan" class="form-select form-select-lg" required>
+                                        <option value="">-- Pilih Pegawai --</option>
+                                        <?php foreach ($employees as $emp): ?>
+                                            <option value="<?php echo e($emp['npp']); ?>"><?php echo e($emp['nama_emp']); ?> (<?php echo e($emp['npp']); ?>)</option>
+                                        <?php endforeach; ?>
+                                    </select>
                                 </div>
-                                <input type="hidden" name="assigned_to_npp" id="pj_assigned_to_npp" value="">
                                 <div class="row g-3">
                                     <div class="col-12 col-md-6">
                                         <label class="form-label">Tanggal Mulai</label>
@@ -493,37 +511,9 @@ if (isset($conn)) {
                                             class="form-control form-control-lg" required>
                                     </div>
                                 </div>
-                                <!-- <div class="mb-3">
-                                    <label class="form-label">Ditugaskan ke</label>
-                                    <select name="assigned_to_npp" id="pj_ditugaskan" class="form-select form-select-lg"
-                                        required>
-                                        <option value="">-- Pilih Pegawai --</option>
-                                        <?php foreach ($employees as $emp): ?>
-                                            <option value="<?php echo e($emp['npp']); ?>"><?php echo e($emp['nama_emp']); ?>
-                                                (<?php echo e($emp['npp']); ?>)</option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div> -->
-
                                 <div class="mb-3">
-                                    <label class="form-label">Master Tugas</label>
-                                    <select name="master_tugas_id" id="pj_master_tugas" class="form-select" required>
-                                        <option value="">-- Pilih Master Tugas --</option>
-                                        <?php foreach ($master_tasks as $mt): ?>
-                                            <option value="<?php echo e($mt['id']); ?>"><?php echo e($mt['judul']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Periode (opsional)</label>
-                                    <select name="periode" id="pj_periode" class="form-select">
-                                        <option value="">-- Tidak ada --</option>
-                                        <option value="bulanan">Bulanan</option>
-                                        <option value="mingguan">Mingguan</option>
-                                        <option value="harian">Harian</option>
-                                    </select>
+                                    <label class="form-label">Periode (input manual)</label>
+                                    <input name="periode" id="pj_periode" class="form-control" placeholder="contoh: harian">
                                 </div>
                                 <!-- <div class="mb-3">
                                                 <label class="form-label">Dilaporkan Oleh</label>
@@ -610,23 +600,20 @@ if (isset($conn)) {
                     // expose helper to calendar dateClick
                     window.openPekerjaanModal = function (dateStr) {
                         ensureModal();
-                        var masterEl = document.getElementById('pj_master_tugas');
+                        var manualEl = document.getElementById('pj_ditugaskan');
                         document.getElementById('pj_mulai').value = dateStr || '';
-                        document.getElementById('pj_selesai').value = '';
-                        if (masterEl) masterEl.value = '';
+                        document.getElementById('pj_selesai').value = dateStr || '';
+                        if (manualEl) manualEl.value = '';
                         var titleEl = document.getElementById('pj_judul');
                         var descEl = document.getElementById('pj_deskripsi');
-                        var assignedHiddenEl = document.getElementById('pj_assigned_to_npp');
-                        var assignedLabelEl = document.getElementById('pj_assigned_label');
                         var periodeEl = document.getElementById('pj_periode');
                         if (titleEl) { titleEl.value = ''; titleEl.readOnly = false; }
                         if (descEl) { descEl.value = ''; descEl.readOnly = false; }
-                        if (assignedHiddenEl) assignedHiddenEl.value = '';
-                        if (assignedLabelEl) assignedLabelEl.value = '';
-                        if (periodeEl) periodeEl.value = '';
+                        if (periodeEl) periodeEl.value = 'harian';
+
                         if (bsModal) bsModal.show();
                         setTimeout(function () {
-                            var el = document.getElementById('pj_master_tugas');
+                            var el = document.getElementById('pj_judul');
                             if (el) el.focus();
                         }, 300);
                     };
@@ -634,6 +621,7 @@ if (isset($conn)) {
                     // submit handler
                     document.getElementById('pj_save').addEventListener('click', function () {
                         var form = document.getElementById('pekerjaanForm');
+
                         // client-side validation: use HTML5 constraint validation
                         if (!form.checkValidity()) {
                             form.reportValidity();
@@ -662,48 +650,22 @@ if (isset($conn)) {
                             });
                     });
 
-                    // Auto-fill modal fields when a Master Tugas is selected
-                    window.masterTasks = <?php echo json_encode($master_tasks, JSON_UNESCAPED_UNICODE); ?> || [];
-                    var masterSelect = document.getElementById('pj_master_tugas');
-                    function applyMaster(m) {
-                        var titleEl = document.getElementById('pj_judul');
-                        var descEl = document.getElementById('pj_deskripsi');
-                        var assignedHiddenEl = document.getElementById('pj_assigned_to_npp');
-                        var assignedLabelEl = document.getElementById('pj_assigned_label');
-                        var periodeEl = document.getElementById('pj_periode');
-                        if (!m) {
-                            if (titleEl) { titleEl.value = ''; titleEl.readOnly = false; }
-                            if (descEl) { descEl.value = ''; descEl.readOnly = false; }
-                            if (assignedHiddenEl) { assignedHiddenEl.value = ''; }
-                            if (assignedLabelEl) { assignedLabelEl.value = ''; }
-                            if (periodeEl) { periodeEl.value = ''; }
-                            return;
-                        }
-                        if (titleEl) { titleEl.value = m.judul || ''; titleEl.readOnly = true; }
-                        if (descEl) { descEl.value = m.deskripsi || ''; descEl.readOnly = true; }
-                        if (assignedHiddenEl) { assignedHiddenEl.value = m.npp || ''; }
-                        if (assignedLabelEl) {
-                            var npp = m.npp || '';
-                            var nm = m.assigned_name || '';
-                            assignedLabelEl.value = npp ? (nm ? (nm + ' (' + npp + ')') : npp) : '';
-                        }
-                        if (periodeEl) { periodeEl.value = m.periode || ''; }
-                    }
-                    if (masterSelect) {
-                        masterSelect.addEventListener('change', function () {
-                            var id = this.value || '';
-                            if (!id) { applyMaster(null); return; }
-                            var found = window.masterTasks.find(function (x) { return String(x.id) === String(id); });
-                            applyMaster(found || null);
-                        });
-                    }
+                    // No master selection on this page; create is manual/daily
 
                     // mark done handler (detail modal)
                     var doneBtn = document.getElementById('pj_detail_done');
                     if (doneBtn) {
                         doneBtn.addEventListener('click', function () {
+                            var isMaster = this.dataset.isMaster === '1';
                             var id = this.dataset.id;
-                            if (!id) return;
+                            var masterId = this.dataset.masterId;
+                            var occDate = this.dataset.occDate;
+                            var occToken = this.dataset.occToken;
+                            if (isMaster) {
+                                if (!masterId || !occDate || !occToken) return;
+                            } else {
+                                if (!id) return;
+                            }
 
                             var alertEl = document.getElementById('pj_detail_alert');
                             function showAlert(kind, text) {
@@ -718,7 +680,9 @@ if (isset($conn)) {
                                 method: 'POST',
                                 credentials: 'same-origin',
                                 headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                                body: new URLSearchParams({ id: id })
+                                body: isMaster
+                                    ? new URLSearchParams({ master_tugas_id: masterId, tgl_mulai: occDate, token: occToken })
+                                    : new URLSearchParams({ id: id })
                             })
                                 .then(r => r.json())
                                 .then(function (json) {

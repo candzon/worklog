@@ -44,19 +44,20 @@ function ensure_session_started() {
     }
 }
 
-function set_user_npp($npp, $nama_emp = null, $nama_bagian = null, $role_id = null) {
+function set_user_npp($npp, $nama_emp = null, $nama_bagian = null, $role_id = null, $bagian_id = null) {
     ensure_session_started();
     $_SESSION['npp'] = $npp;
     if ($nama_emp !== null) $_SESSION['nama_emp'] = $nama_emp;
     if ($nama_bagian !== null) $_SESSION['nama_bagian'] = $nama_bagian;
     if ($role_id !== null) $_SESSION['role_id'] = $role_id;
+    if ($bagian_id !== null) $_SESSION['bagian_id'] = $bagian_id;
 
     if (function_exists('session_regenerate_id')) session_regenerate_id(true);
 }
 
 function clear_user_session() {
     ensure_session_started();
-    unset($_SESSION['npp'], $_SESSION['nama_emp'], $_SESSION['nama_bagian'], $_SESSION['role_id']);
+    unset($_SESSION['npp'], $_SESSION['nama_emp'], $_SESSION['nama_bagian'], $_SESSION['role_id'], $_SESSION['bagian_id']);
     if (function_exists('session_regenerate_id')) session_regenerate_id(true);
 }
 
@@ -188,4 +189,33 @@ function format_datetime_id($dateTimeStr)
     $time = date('H:i', $ts);
     $mname = $months[$month] ?? date('M', $ts);
     return $day . ' ' . $mname . ' ' . $year . ' ' . $time;
+}
+
+// App signing helpers (used to prevent client-side date manipulation for recurring master occurrences)
+function worklog_app_key() {
+    static $key = null;
+    if ($key !== null) return $key;
+
+    $env = getenv('WORKLOG_APP_KEY');
+    if (!empty($env)) {
+        $key = (string) $env;
+        return $key;
+    }
+
+    // Fallback: deterministic per-server key (better than a fixed literal), but it's still recommended
+    // to set WORKLOG_APP_KEY in the environment for production.
+    $key = hash('sha256', __DIR__ . '|' . PHP_VERSION . '|' . (string) ini_get('session.save_path'));
+    return $key;
+}
+
+function worklog_sign_master_occurrence($masterId, $occDate) {
+    $payload = (string) ((int) $masterId) . '|' . (string) $occDate;
+    return hash_hmac('sha256', $payload, worklog_app_key());
+}
+
+function worklog_verify_master_occurrence($masterId, $occDate, $token) {
+    $expected = worklog_sign_master_occurrence($masterId, $occDate);
+    return is_string($token) && $token !== '' && function_exists('hash_equals')
+        ? hash_equals($expected, $token)
+        : ($expected === (string) $token);
 }

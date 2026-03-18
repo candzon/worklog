@@ -230,17 +230,15 @@ if (isset($conn)) {
                                             <label class="form-label">Bagian</label>
                                             <select name="bagian_id" id="m_bagian" class="form-select">
                                                 <option value="">- Pilih Bagian -</option>
-                                                <?php foreach ($bagians as $b): ?>
-                                                    <option value="<?php echo e($b['id_bagian']); ?>"><?php echo e($b['nama_bagian']); ?></option>
-                                                <?php endforeach; ?>
+                                                    <option value="12">Apoteker</option>
                                             </select>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label">Periode</label>
                                             <select name="periode" id="m_periode" class="form-select">
                                                 <option value="bulanan">Bulanan</option>
-                                                <option value="mingguan">Mingguan</option>
-                                                <option value="harian">Harian</option>
+                                                <!-- <option value="mingguan">Mingguan</option>
+                                                <option value="harian">Harian</option> -->
                                             </select>
                                         </div>
                                     </div>

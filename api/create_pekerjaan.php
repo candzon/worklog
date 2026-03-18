@@ -14,6 +14,24 @@ if (empty($npp)) {
     exit;
 }
 
+// Ensure nama_emp is available (fallback to DB if session is missing)
+if (empty($nama_emp) && isset($conn)) {
+    $stmtEmp = $conn->prepare('SELECT nama_emp FROM employee WHERE npp = ? LIMIT 1');
+    if ($stmtEmp) {
+        $stmtEmp->bind_param('s', $npp);
+        $stmtEmp->execute();
+        $resEmp = $stmtEmp->get_result();
+        if ($resEmp) {
+            $rowEmp = $resEmp->fetch_assoc();
+            $nama_emp = $rowEmp['nama_emp'] ?? $nama_emp;
+            if (!empty($nama_emp)) {
+                $_SESSION['nama_emp'] = $nama_emp;
+            }
+        }
+        $stmtEmp->close();
+    }
+}
+
 // Enforce role-based create permission using existing schema: users with role 'user' cannot create
 $roleName = null;
 if (isset($conn)) {
@@ -30,8 +48,8 @@ if (isset($conn)) {
     }
 }
 
-if ($roleName === 'user') {
-    echo json_encode(['success' => false, 'message' => 'Anda tidak memiliki izin untuk membuat pekerjaan baru']);
+if (strtolower(trim((string) $roleName)) !== 'manager') {
+    echo json_encode(['success' => false, 'message' => 'Hanya role manager yang dapat membuat pekerjaan baru']);
     http_response_code(403);
     exit;
 }
