@@ -16,7 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $deskripsi = trim($_POST['deskripsi'] ?? '');
     $tglMulai = trim($_POST['tgl_mulai'] ?? '');
     $tglSelesai = trim($_POST['tgl_selesai'] ?? '');
-    $ditugaskan = trim($_POST['ditugaskan'] ?? '');
+    $assigned_to_npp = trim($_POST['assigned_to_npp'] ?? $_POST['ditugaskan'] ?? '');
+    $master_tugas_id = trim($_POST['master_tugas_id'] ?? '');
+    $periode = trim($_POST['periode'] ?? '');
 
     if ($judul === '')
         $errors[] = 'Judul pekerjaan wajib diisi';
@@ -26,14 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Tanggal mulai wajib diisi';
     if ($tglSelesai === '')
         $errors[] = 'Tanggal selesai wajib diisi';
-    if ($ditugaskan === '')
+    if ($assigned_to_npp === '')
         $errors[] = 'Pilih pegawai yang ditugaskan';
 
 
     if (isset($conn)) {
-        $stmt = $conn->prepare("INSERT INTO pekerjaan (judul, deskripsi, npp, nama_emp, tgl_mulai, tgl_selesai, ditugaskan) VALUES (?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''))");
+        $stmt = $conn->prepare("INSERT INTO pekerjaan (judul, deskripsi, created_by_npp, nama_emp, tgl_mulai, tgl_selesai, assigned_to_npp, master_tugas_id, periode) VALUES (?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?,''), NULLIF(?,''))");
         if ($stmt) {
-            $stmt->bind_param('sssssss', $judul, $deskripsi, $npp, $nama_emp, $tglMulai, $tglSelesai, $ditugaskan);
+            $stmt->bind_param('sssssssss', $judul, $deskripsi, $npp, $nama_emp, $tglMulai, $tglSelesai, $assigned_to_npp, $master_tugas_id, $periode);
             $stmt->execute();
             $stmt->close();
             if (function_exists('flash_swal'))
@@ -83,6 +85,17 @@ if (isset($conn)) {
                 $employees[] = $e;
             $r2->free();
         }
+    }
+}
+
+// load master tasks for optional linkage (include fields for auto-fill)
+$master_tasks = [];
+if (isset($conn)) {
+    $rm = $conn->query('SELECT mt.id, mt.judul, mt.deskripsi, mt.npp, mt.bagian_id, mt.periode, e.nama_emp AS assigned_name FROM master_tugas mt LEFT JOIN employee e ON e.npp = mt.npp ORDER BY mt.judul');
+    if ($rm) {
+        while ($mt = $rm->fetch_assoc())
+            $master_tasks[] = $mt;
+        $rm->free();
     }
 }
 
@@ -463,6 +476,11 @@ if (isset($conn)) {
                                     <textarea name="deskripsi" id="pj_deskripsi" class="form-control form-control-lg"
                                         rows="4" required></textarea>
                                 </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Ditugaskan (dari Master)</label>
+                                    <input type="text" id="pj_assigned_label" class="form-control" value="" readonly>
+                                </div>
+                                <input type="hidden" name="assigned_to_npp" id="pj_assigned_to_npp" value="">
                                 <div class="row g-3">
                                     <div class="col-12 col-md-6">
                                         <label class="form-label">Tanggal Mulai</label>
@@ -475,15 +493,36 @@ if (isset($conn)) {
                                             class="form-control form-control-lg" required>
                                     </div>
                                 </div>
-                                <div class="mb-3">
+                                <!-- <div class="mb-3">
                                     <label class="form-label">Ditugaskan ke</label>
-                                    <select name="ditugaskan" id="pj_ditugaskan" class="form-select form-select-lg"
+                                    <select name="assigned_to_npp" id="pj_ditugaskan" class="form-select form-select-lg"
                                         required>
                                         <option value="">-- Pilih Pegawai --</option>
                                         <?php foreach ($employees as $emp): ?>
                                             <option value="<?php echo e($emp['npp']); ?>"><?php echo e($emp['nama_emp']); ?>
                                                 (<?php echo e($emp['npp']); ?>)</option>
                                         <?php endforeach; ?>
+                                    </select>
+                                </div> -->
+
+                                <div class="mb-3">
+                                    <label class="form-label">Master Tugas</label>
+                                    <select name="master_tugas_id" id="pj_master_tugas" class="form-select" required>
+                                        <option value="">-- Pilih Master Tugas --</option>
+                                        <?php foreach ($master_tasks as $mt): ?>
+                                            <option value="<?php echo e($mt['id']); ?>"><?php echo e($mt['judul']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Periode (opsional)</label>
+                                    <select name="periode" id="pj_periode" class="form-select">
+                                        <option value="">-- Tidak ada --</option>
+                                        <option value="bulanan">Bulanan</option>
+                                        <option value="mingguan">Mingguan</option>
+                                        <option value="harian">Harian</option>
                                     </select>
                                 </div>
                                 <!-- <div class="mb-3">
@@ -571,13 +610,23 @@ if (isset($conn)) {
                     // expose helper to calendar dateClick
                     window.openPekerjaanModal = function (dateStr) {
                         ensureModal();
+                        var masterEl = document.getElementById('pj_master_tugas');
                         document.getElementById('pj_mulai').value = dateStr || '';
                         document.getElementById('pj_selesai').value = '';
-                        document.getElementById('pj_judul').value = '';
-                        document.getElementById('pj_deskripsi').value = '';
+                        if (masterEl) masterEl.value = '';
+                        var titleEl = document.getElementById('pj_judul');
+                        var descEl = document.getElementById('pj_deskripsi');
+                        var assignedHiddenEl = document.getElementById('pj_assigned_to_npp');
+                        var assignedLabelEl = document.getElementById('pj_assigned_label');
+                        var periodeEl = document.getElementById('pj_periode');
+                        if (titleEl) { titleEl.value = ''; titleEl.readOnly = false; }
+                        if (descEl) { descEl.value = ''; descEl.readOnly = false; }
+                        if (assignedHiddenEl) assignedHiddenEl.value = '';
+                        if (assignedLabelEl) assignedLabelEl.value = '';
+                        if (periodeEl) periodeEl.value = '';
                         if (bsModal) bsModal.show();
                         setTimeout(function () {
-                            var el = document.getElementById('pj_judul');
+                            var el = document.getElementById('pj_master_tugas');
                             if (el) el.focus();
                         }, 300);
                     };
@@ -612,6 +661,42 @@ if (isset($conn)) {
                                 if (window.Swal) Swal.fire({ icon: 'error', title: 'Error', text: 'Terjadi error saat menyimpan.' });
                             });
                     });
+
+                    // Auto-fill modal fields when a Master Tugas is selected
+                    window.masterTasks = <?php echo json_encode($master_tasks, JSON_UNESCAPED_UNICODE); ?> || [];
+                    var masterSelect = document.getElementById('pj_master_tugas');
+                    function applyMaster(m) {
+                        var titleEl = document.getElementById('pj_judul');
+                        var descEl = document.getElementById('pj_deskripsi');
+                        var assignedHiddenEl = document.getElementById('pj_assigned_to_npp');
+                        var assignedLabelEl = document.getElementById('pj_assigned_label');
+                        var periodeEl = document.getElementById('pj_periode');
+                        if (!m) {
+                            if (titleEl) { titleEl.value = ''; titleEl.readOnly = false; }
+                            if (descEl) { descEl.value = ''; descEl.readOnly = false; }
+                            if (assignedHiddenEl) { assignedHiddenEl.value = ''; }
+                            if (assignedLabelEl) { assignedLabelEl.value = ''; }
+                            if (periodeEl) { periodeEl.value = ''; }
+                            return;
+                        }
+                        if (titleEl) { titleEl.value = m.judul || ''; titleEl.readOnly = true; }
+                        if (descEl) { descEl.value = m.deskripsi || ''; descEl.readOnly = true; }
+                        if (assignedHiddenEl) { assignedHiddenEl.value = m.npp || ''; }
+                        if (assignedLabelEl) {
+                            var npp = m.npp || '';
+                            var nm = m.assigned_name || '';
+                            assignedLabelEl.value = npp ? (nm ? (nm + ' (' + npp + ')') : npp) : '';
+                        }
+                        if (periodeEl) { periodeEl.value = m.periode || ''; }
+                    }
+                    if (masterSelect) {
+                        masterSelect.addEventListener('change', function () {
+                            var id = this.value || '';
+                            if (!id) { applyMaster(null); return; }
+                            var found = window.masterTasks.find(function (x) { return String(x.id) === String(id); });
+                            applyMaster(found || null);
+                        });
+                    }
 
                     // mark done handler (detail modal)
                     var doneBtn = document.getElementById('pj_detail_done');

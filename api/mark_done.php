@@ -20,7 +20,7 @@ if ($id <= 0) {
     exit;
 }
 
-$stmt = $conn->prepare('SELECT ditugaskan FROM pekerjaan WHERE id = ? LIMIT 1');
+$stmt = $conn->prepare('SELECT assigned_to_npp FROM pekerjaan WHERE id = ? LIMIT 1');
 if (!$stmt) {
     echo json_encode(['success' => false, 'message' => 'DB error']);
     http_response_code(500);
@@ -38,7 +38,7 @@ if (!$row) {
     exit;
 }
 
-$assigned = $row['ditugaskan'];
+$assigned = $row['assigned_to_npp'];
 if ($assigned !== $npp) {
     echo json_encode(['success' => false, 'message' => 'Forbidden']);
     http_response_code(403);

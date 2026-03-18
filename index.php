@@ -5,6 +5,22 @@ require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
 ensure_session_started();
+
+// If the request was rewritten to index.php for an unknown path (pretty URL),
+// show 404 instead of the dashboard.
+$reqPath = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+$base = function_exists('base_path') ? base_path() : '';
+if (is_string($reqPath) && $base !== '' && strpos($reqPath, $base) === 0) {
+  $reqPath = substr($reqPath, strlen($base));
+}
+$reqPath = trim((string) $reqPath, '/');
+if ($reqPath !== '' && $reqPath !== 'index.php') {
+  http_response_code(404);
+  require_once __DIR__ . '/includes/404.php';
+  require_once __DIR__ . '/includes/footer.php';
+  exit;
+}
+
 $currentNpp = $_SESSION['npp'] ?? null;
 $roleId = $_SESSION['role_id'] ?? null;
 $roleName = null;
@@ -35,13 +51,13 @@ if (isset($conn)) {
   $assignedFilterSql = '';
   $assignedParams = [];
   if ($roleName === 'user' && $currentNpp) {
-    $assignedFilterSql = "AND ditugaskan = ?";
+    $assignedFilterSql = "AND assigned_to_npp = ?";
     $assignedParams[] = $currentNpp;
   }
 
-  // Count open tasks
+  // Count open tasks (normalize status values: done/selesai/completed)
   $openCount = 0;
-  $sql = "SELECT COUNT(*) AS cnt FROM pekerjaan WHERE status != 'done' " . $assignedFilterSql;
+  $sql = "SELECT COUNT(*) AS cnt FROM pekerjaan WHERE NOT (LOWER(TRIM(status)) IN ('done','selesai','completed')) " . $assignedFilterSql;
   $stmt = $conn->prepare($sql);
   if ($stmt) {
     if (!empty($assignedParams))
@@ -53,9 +69,9 @@ if (isset($conn)) {
     $stmt->close();
   }
 
-  // Count done tasks
+  // Count done tasks (normalize status values: done/selesai/completed)
   $doneCount = 0;
-  $sql = "SELECT COUNT(*) AS cnt FROM pekerjaan WHERE status = 'done' " . $assignedFilterSql;
+  $sql = "SELECT COUNT(*) AS cnt FROM pekerjaan WHERE LOWER(TRIM(status)) IN ('done','selesai','completed') " . $assignedFilterSql;
   $stmt = $conn->prepare($sql);
   if ($stmt) {
     if (!empty($assignedParams))
@@ -69,7 +85,7 @@ if (isset($conn)) {
 
   // Recent tasks (latest 5)
   $recent = [];
-  $sql = "SELECT id, judul, tgl_mulai, tgl_selesai, status, ditugaskan FROM pekerjaan WHERE 1 " . $assignedFilterSql . " ORDER BY created_at DESC LIMIT 5";
+  $sql = "SELECT id, judul, tgl_mulai, tgl_selesai, status, assigned_to_npp FROM pekerjaan WHERE 1 " . $assignedFilterSql . " ORDER BY created_at DESC LIMIT 5";
   $stmt = $conn->prepare($sql);
   if ($stmt) {
     if (!empty($assignedParams))
@@ -81,9 +97,9 @@ if (isset($conn)) {
     $stmt->close();
   }
 
-  // Near-deadline: tgl_selesai within next 7 days and not done
+  // Near-deadline: tgl_selesai within next 7 days and not done (normalize status)
   $nearCount = 0;
-  $sql = "SELECT COUNT(*) AS cnt FROM pekerjaan WHERE status != 'done' AND tgl_selesai IS NOT NULL AND tgl_selesai BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) " . $assignedFilterSql;
+  $sql = "SELECT COUNT(*) AS cnt FROM pekerjaan WHERE NOT (LOWER(TRIM(status)) IN ('done','selesai','completed')) AND tgl_selesai IS NOT NULL AND tgl_selesai BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY) " . $assignedFilterSql;
   $stmt = $conn->prepare($sql);
   if ($stmt) {
     if (!empty($assignedParams))
@@ -105,7 +121,7 @@ if (isset($conn)) {
 // Top assigned (who most often get assigned tasks)
 $topAssigned = [];
 if (isset($conn) && ($roleName !== 'user')) {
-  $sql = "SELECT p.ditugaskan AS npp, COALESCE(e.nama_emp, p.ditugaskan) AS nama_emp, COUNT(*) AS cnt FROM pekerjaan p LEFT JOIN employee e ON e.npp = p.ditugaskan GROUP BY p.ditugaskan, e.nama_emp ORDER BY cnt DESC LIMIT 10";
+  $sql = "SELECT p.assigned_to_npp AS npp, COALESCE(e.nama_emp, p.assigned_to_npp) AS nama_emp, COUNT(*) AS cnt FROM pekerjaan p LEFT JOIN employee e ON e.npp = p.assigned_to_npp GROUP BY p.assigned_to_npp, e.nama_emp ORDER BY cnt DESC LIMIT 10";
   $res = $conn->query($sql);
   if ($res) {
     while ($r = $res->fetch_assoc()) {
@@ -119,7 +135,7 @@ if (isset($conn) && ($roleName !== 'user')) {
 // Top done by assigned (who completed most tasks)
 $topDone = [];
 if (isset($conn) && ($roleName !== 'user')) {
-  $sql = "SELECT p.ditugaskan AS npp, COALESCE(e.nama_emp, p.ditugaskan) AS nama_emp, COUNT(*) AS cnt FROM pekerjaan p LEFT JOIN employee e ON e.npp = p.ditugaskan WHERE p.status = 'done' GROUP BY p.ditugaskan, e.nama_emp ORDER BY cnt DESC LIMIT 10";
+  $sql = "SELECT p.assigned_to_npp AS npp, COALESCE(e.nama_emp, p.assigned_to_npp) AS nama_emp, COUNT(*) AS cnt FROM pekerjaan p LEFT JOIN employee e ON e.npp = p.assigned_to_npp WHERE LOWER(TRIM(p.status)) IN ('done','selesai','completed') GROUP BY p.assigned_to_npp, e.nama_emp ORDER BY cnt DESC LIMIT 10";
   $res = $conn->query($sql);
   if ($res) {
     while ($r = $res->fetch_assoc()) {

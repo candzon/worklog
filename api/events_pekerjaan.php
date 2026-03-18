@@ -24,10 +24,11 @@ if (isset($conn)) {
     }
 
     if ($roleName === 'user' && !empty($_SESSION['npp'])) {
-        $sql = "SELECT p.id, p.judul, p.deskripsi, p.tgl_mulai, p.tgl_selesai, p.created_at, p.updated_at, p.status, p.ditugaskan, p.npp AS reporter_npp, p.nama_emp AS reporter_name, e.nama_emp AS assigned_name
+        $sql = "SELECT p.id, p.judul, p.deskripsi, p.tgl_mulai, p.tgl_selesai, p.created_at, p.updated_at, p.status, p.assigned_to_npp AS ditugaskan, p.created_by_npp AS reporter_npp, p.nama_emp AS reporter_name, e.nama_emp AS assigned_name, p.master_tugas_id, mt.judul AS master_judul
                 FROM pekerjaan p
-                LEFT JOIN employee e ON e.npp = p.ditugaskan
-                WHERE p.ditugaskan = ?";
+                LEFT JOIN employee e ON e.npp = p.assigned_to_npp
+                LEFT JOIN master_tugas mt ON mt.id = p.master_tugas_id
+                WHERE p.assigned_to_npp = ?";
         $stmt = $conn->prepare($sql);
         if ($stmt) {
             $stmt->bind_param('s', $_SESSION['npp']);
@@ -37,9 +38,10 @@ if (isset($conn)) {
             $res = false;
         }
     } else {
-        $sql = "SELECT p.id, p.judul, p.deskripsi, p.tgl_mulai, p.tgl_selesai, p.created_at, p.updated_at, p.status, p.ditugaskan, p.npp AS reporter_npp, p.nama_emp AS reporter_name, e.nama_emp AS assigned_name
+        $sql = "SELECT p.id, p.judul, p.deskripsi, p.tgl_mulai, p.tgl_selesai, p.created_at, p.updated_at, p.status, p.assigned_to_npp AS ditugaskan, p.created_by_npp AS reporter_npp, p.nama_emp AS reporter_name, e.nama_emp AS assigned_name, p.master_tugas_id, mt.judul AS master_judul
                 FROM pekerjaan p
-                LEFT JOIN employee e ON e.npp = p.ditugaskan";
+                LEFT JOIN employee e ON e.npp = p.assigned_to_npp
+                LEFT JOIN master_tugas mt ON mt.id = p.master_tugas_id";
         $res = $conn->query($sql);
     }
 
@@ -53,12 +55,13 @@ if (isset($conn)) {
             if (empty($startDate)) continue;
 
             // Calendar currently hides time, so treat as all-day event
+            $isDone = in_array(strtolower(trim($r['status'] ?? '')), ['done','selesai','completed']);
             $event = [
                 'id' => $r['id'],
                 'title' => $r['judul'],
                 'start' => $startDate,
                 'allDay' => true,
-                'color' => ($r['status'] === 'done') ? '#28a745' : '#007bff',
+                'color' => $isDone ? '#28a745' : '#007bff',
                 'extendedProps' => [
                     'description' => $r['deskripsi'],
                     'status' => $r['status'],
@@ -68,6 +71,8 @@ if (isset($conn)) {
                     'reporter_name' => $r['reporter_name'],
                     'tgl_mulai' => $r['tgl_mulai'],
                     'tgl_selesai' => $r['tgl_selesai'],
+                    'master_tugas_id' => $r['master_tugas_id'] ?? null,
+                    'master_judul' => $r['master_judul'] ?? null,
                     // formatted date strings (use PHP helpers)
                     'tgl_mulai_fmt' => (!empty($r['tgl_mulai']) ? format_date_id($r['tgl_mulai']) : ''),
                     'tgl_selesai_fmt' => (!empty($r['tgl_selesai']) ? format_date_id($r['tgl_selesai']) : ''),

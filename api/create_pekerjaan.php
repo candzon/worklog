@@ -49,7 +49,49 @@ $deskripsi = trim($input['deskripsi'] ?? '');
 $tglMulai = trim($input['tgl_mulai'] ?? ''); // YYYY-MM-DD atau ''
 $tglSelesai = trim($input['tgl_selesai'] ?? ''); // YYYY-MM-DD atau ''
 // Terima kedua kemungkinan nama field dari form/JS
-$ditugaskan = trim($input['ditugaskan_npp'] ?? $input['ditugaskan'] ?? '');
+$ditugaskan = trim($input['assigned_to_npp'] ?? $input['ditugaskan_npp'] ?? $input['ditugaskan'] ?? '');
+$master_tugas_id = trim($input['master_tugas_id'] ?? '');
+$periode = trim($input['periode'] ?? '');
+
+// If master_tugas_id is provided, use master_tugas as the source of truth for
+// judul/deskripsi/assigned_to_npp/periode so users don't need to fill them manually.
+if ($master_tugas_id !== '') {
+    if (!isset($conn)) {
+        echo json_encode(['success' => false, 'message' => 'Database tidak tersedia']);
+        http_response_code(500);
+        exit;
+    }
+    if (!ctype_digit((string) $master_tugas_id)) {
+        echo json_encode(['success' => false, 'message' => 'Master Tugas tidak valid']);
+        http_response_code(400);
+        exit;
+    }
+    $mid = (int) $master_tugas_id;
+    $stmtMt = $conn->prepare('SELECT judul, deskripsi, npp, periode FROM master_tugas WHERE id = ? LIMIT 1');
+    if (!$stmtMt) {
+        echo json_encode(['success' => false, 'message' => 'Gagal menyiapkan query master']);
+        http_response_code(500);
+        exit;
+    }
+    $stmtMt->bind_param('i', $mid);
+    $stmtMt->execute();
+    $resMt = $stmtMt->get_result();
+    $mt = $resMt ? $resMt->fetch_assoc() : null;
+    $stmtMt->close();
+
+    if (!$mt) {
+        echo json_encode(['success' => false, 'message' => 'Master Tugas tidak ditemukan']);
+        http_response_code(400);
+        exit;
+    }
+
+    $judul = trim($mt['judul'] ?? '');
+    $deskripsi = trim($mt['deskripsi'] ?? '');
+    $ditugaskan = trim($mt['npp'] ?? '');
+    if ($periode === '') {
+        $periode = trim($mt['periode'] ?? '');
+    }
+}
 
 if ($judul === '') {
     echo json_encode(['success' => false, 'message' => 'Judul wajib diisi']);
@@ -85,14 +127,14 @@ if (!isset($conn)) {
     exit;
 }
 
-$stmt = $conn->prepare("INSERT INTO pekerjaan (judul, deskripsi, npp, nama_emp, tgl_mulai, tgl_selesai, ditugaskan) VALUES (?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?)");
+// Insert using updated schema: created_by_npp, nama_emp, assigned_to_npp, optional master_tugas_id and periode
+$stmt = $conn->prepare("INSERT INTO pekerjaan (judul, deskripsi, created_by_npp, nama_emp, tgl_mulai, tgl_selesai, assigned_to_npp, master_tugas_id, periode) VALUES (?, ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?,''), NULLIF(?,''))");
 if (!$stmt) {
     echo json_encode(['success' => false, 'message' => 'Gagal menyiapkan query']);
     http_response_code(500);
     exit;
 }
-
-$stmt->bind_param('sssssss', $judul, $deskripsi, $npp, $nama_emp, $tglMulai, $tglSelesai, $ditugaskan);
+$stmt->bind_param('sssssssss', $judul, $deskripsi, $npp, $nama_emp, $tglMulai, $tglSelesai, $ditugaskan, $master_tugas_id, $periode);
 $ok = $stmt->execute();
 $insertId = $stmt->insert_id;
 $stmt->close();
