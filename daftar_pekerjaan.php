@@ -512,8 +512,8 @@ if (isset($conn)) {
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Periode (input manual)</label>
-                                    <input name="periode" id="pj_periode" class="form-control" placeholder="contoh: harian">
+                                    <label hidden class="form-label">Periode (input manual)</label>
+                                    <input hidden name="periode"  id="pj_periode" class="form-control" placeholder="contoh: harian">
                                 </div>
                                 <!-- <div class="mb-3">
                                                 <label class="form-label">Dilaporkan Oleh</label>
@@ -568,8 +568,14 @@ if (isset($conn)) {
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-secondary"
                                 data-bs-dismiss="modal">Tutup</button>
-                            <button type="button" class="btn btn-primary d-none" id="pj_detail_done">Tandai
-                                Selesai</button>
+                            <button type="button" class="btn btn-primary d-none" id="pj_detail_done"
+                                data-swal-callback="markPekerjaanDone"
+                                data-swal-icon="question"
+                                data-swal-title="Tandai selesai?"
+                                data-swal-text="Status pekerjaan akan diubah menjadi selesai."
+                                data-swal-confirm="Ya, selesai"
+                                data-swal-cancel="Batal"
+                            >Tandai Selesai</button>
                         </div>
                     </div>
                 </div>
@@ -618,8 +624,8 @@ if (isset($conn)) {
                         }, 300);
                     };
 
-                    // submit handler
-                    document.getElementById('pj_save').addEventListener('click', function () {
+                    // submit handler (called by SweetAlert confirm)
+                    window.submitPekerjaan = function () {
                         var form = document.getElementById('pekerjaanForm');
 
                         // client-side validation: use HTML5 constraint validation
@@ -648,66 +654,78 @@ if (isset($conn)) {
                                 console.error(err);
                                 if (window.Swal) Swal.fire({ icon: 'error', title: 'Error', text: 'Terjadi error saat menyimpan.' });
                             });
-                    });
+                    };
+
+                    // button: attach swal confirm via helper
+                    var saveBtn = document.getElementById('pj_save');
+                    if (saveBtn) {
+                        saveBtn.dataset.swalCallback = 'submitPekerjaan';
+                        saveBtn.dataset.swalIcon = 'question';
+                        saveBtn.dataset.swalTitle = 'Simpan pekerjaan?';
+                        saveBtn.dataset.swalText = 'Pekerjaan akan disimpan.';
+                        saveBtn.dataset.swalConfirm = 'Ya, simpan';
+                        saveBtn.dataset.swalCancel = 'Batal';
+                    }
 
                     // No master selection on this page; create is manual/daily
 
-                    // mark done handler (detail modal)
-                    var doneBtn = document.getElementById('pj_detail_done');
-                    if (doneBtn) {
-                        doneBtn.addEventListener('click', function () {
-                            var isMaster = this.dataset.isMaster === '1';
-                            var id = this.dataset.id;
-                            var masterId = this.dataset.masterId;
-                            var occDate = this.dataset.occDate;
-                            var occToken = this.dataset.occToken;
-                            if (isMaster) {
-                                if (!masterId || !occDate || !occToken) return;
-                            } else {
-                                if (!id) return;
-                            }
+                    // mark done handler (detail modal) - called by SweetAlert confirm
+                    window.markPekerjaanDone = function () {
+                        var btn = this || document.getElementById('pj_detail_done');
+                        if (!btn) return;
 
-                            var alertEl = document.getElementById('pj_detail_alert');
-                            function showAlert(kind, text) {
-                                if (!alertEl) return;
-                                alertEl.classList.remove('d-none', 'alert-success', 'alert-danger');
-                                alertEl.classList.add(kind === 'success' ? 'alert-success' : 'alert-danger');
-                                alertEl.textContent = text;
-                            }
+                        var isMaster = btn.dataset.isMaster === '1';
+                        var id = btn.dataset.id;
+                        var masterId = btn.dataset.masterId;
+                        var occDate = btn.dataset.occDate;
+                        var occToken = btn.dataset.occToken;
 
-                            this.disabled = true;
-                            fetch('<?php echo site_url("api/mark_done.php"); ?>', {
-                                method: 'POST',
-                                credentials: 'same-origin',
-                                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                                body: isMaster
-                                    ? new URLSearchParams({ master_tugas_id: masterId, tgl_mulai: occDate, token: occToken })
-                                    : new URLSearchParams({ id: id })
-                            })
-                                .then(r => r.json())
-                                .then(function (json) {
-                                    if (json && json.success) {
-                                        showAlert('success', 'Berhasil ditandai selesai.');
-                                        var statusEl = document.getElementById('pj_detail_status');
-                                        if (statusEl) {
-                                            statusEl.textContent = 'done';
-                                            statusEl.classList.remove('text-bg-secondary', 'text-bg-primary');
-                                            statusEl.classList.add('text-bg-success');
-                                        }
-                                        doneBtn.classList.add('d-none');
-                                        if (window.pekerjaanCalendar) window.pekerjaanCalendar.refetchEvents();
-                                    } else {
-                                        showAlert('error', (json && json.message) ? json.message : 'Gagal memperbarui.');
-                                        doneBtn.disabled = false;
+                        if (isMaster) {
+                            if (!masterId || !occDate || !occToken) return;
+                        } else {
+                            if (!id) return;
+                        }
+
+                        var alertEl = document.getElementById('pj_detail_alert');
+                        function showAlert(kind, text) {
+                            if (!alertEl) return;
+                            alertEl.classList.remove('d-none', 'alert-success', 'alert-danger');
+                            alertEl.classList.add(kind === 'success' ? 'alert-success' : 'alert-danger');
+                            alertEl.textContent = text;
+                        }
+
+                        btn.disabled = true;
+                        fetch('<?php echo site_url("api/mark_done.php"); ?>', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                            body: isMaster
+                                ? new URLSearchParams({ master_tugas_id: masterId, tgl_mulai: occDate, token: occToken })
+                                : new URLSearchParams({ id: id })
+                        })
+                            .then(function (r) { return r.json(); })
+                            .then(function (json) {
+                                if (json && json.success) {
+                                    showAlert('success', 'Berhasil ditandai selesai.');
+                                    var statusEl = document.getElementById('pj_detail_status');
+                                    if (statusEl) {
+                                        statusEl.textContent = 'done';
+                                        statusEl.classList.remove('text-bg-secondary', 'text-bg-primary');
+                                        statusEl.classList.add('text-bg-success');
                                     }
-                                })
-                                .catch(function (err) {
-                                    console.error(err);
-                                    showAlert('error', 'Terjadi kesalahan.');
-                                    doneBtn.disabled = false;
-                                });
-                        });
-                    }
+                                    btn.classList.add('d-none');
+                                    if (window.pekerjaanCalendar) window.pekerjaanCalendar.refetchEvents();
+                                } else {
+                                    showAlert('error', (json && json.message) ? json.message : 'Gagal memperbarui.');
+                                    btn.disabled = false;
+                                }
+                            })
+                            .catch(function (err) {
+                                console.error(err);
+                                showAlert('error', 'Terjadi kesalahan.');
+                                btn.disabled = false;
+                            });
+                    };
                 })();
             </script>
 
@@ -754,4 +772,9 @@ if (isset($conn)) {
 
 <?php
 require_once __DIR__ . '/includes/footer.php';
+
+// SweetAlert confirm for click actions
+if (function_exists('render_swal_confirm_clicks')) {
+    render_swal_confirm_clicks('#pj_save, #pj_detail_done');
+}
 ?>

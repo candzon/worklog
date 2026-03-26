@@ -12,7 +12,14 @@ function e($str) {
 
 // Return application base path (e.g. '/worklog' or empty string for webroot)
 function base_path() {
-    $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+    $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+    $scriptDir = str_replace('\\', '/', dirname($scriptName));
+
+    // If running from /api/*, keep base at application root (e.g. /worklog)
+    if (preg_match('#/api$#', $scriptDir)) {
+        $scriptDir = str_replace('\\', '/', dirname($scriptDir));
+    }
+
     return $scriptDir === '/' ? '' : $scriptDir;
 
 }
@@ -44,20 +51,19 @@ function ensure_session_started() {
     }
 }
 
-function set_user_npp($npp, $nama_emp = null, $nama_bagian = null, $role_id = null, $bagian_id = null) {
+function set_user_npp($npp, $nama_emp = null, $nama_bagian = null, $role_id = null) {
     ensure_session_started();
     $_SESSION['npp'] = $npp;
     if ($nama_emp !== null) $_SESSION['nama_emp'] = $nama_emp;
     if ($nama_bagian !== null) $_SESSION['nama_bagian'] = $nama_bagian;
     if ($role_id !== null) $_SESSION['role_id'] = $role_id;
-    if ($bagian_id !== null) $_SESSION['bagian_id'] = $bagian_id;
 
     if (function_exists('session_regenerate_id')) session_regenerate_id(true);
 }
 
 function clear_user_session() {
     ensure_session_started();
-    unset($_SESSION['npp'], $_SESSION['nama_emp'], $_SESSION['nama_bagian'], $_SESSION['role_id'], $_SESSION['bagian_id']);
+    unset($_SESSION['npp'], $_SESSION['nama_emp'], $_SESSION['nama_bagian'], $_SESSION['role_id']);
     if (function_exists('session_regenerate_id')) session_regenerate_id(true);
 }
 
@@ -118,6 +124,122 @@ function render_flash_swal() {
     ], $data['options'] ?? []);
     $json = json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
     echo "<script>document.addEventListener('DOMContentLoaded', function(){ if(window.Swal){ Swal.fire($json); } else { console.warn('SweetAlert not loaded'); } });</script>";
+}
+
+// Render a reusable SweetAlert confirm dialog for form submissions.
+// Usage:
+//   render_swal_confirm_forms('form.deleteMasterForm', ['title' => 'Hapus?', 'text' => 'Yakin?']);
+// Per-form overrides via data attributes (optional):
+//   data-swal-title, data-swal-text, data-swal-icon, data-swal-confirm, data-swal-cancel
+function render_swal_confirm_forms($selector = 'form.js-swal-confirm', array $options = []) {
+    $selector = (string) $selector;
+    if ($selector === '') return;
+
+    $defaults = [
+        'icon' => 'warning',
+        'title' => 'Yakin?',
+        'text' => 'Tindakan ini tidak bisa dibatalkan.',
+        'confirmButtonText' => 'Ya',
+        'cancelButtonText' => 'Batal',
+    ];
+    $opts = array_merge($defaults, $options);
+
+    // We keep selector separate to avoid mixing untrusted strings into JSON options.
+    $selJson = json_encode($selector, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+    $optJson = json_encode($opts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+
+    echo "<script>\n";
+    echo "document.addEventListener('DOMContentLoaded', function () {\n";
+    echo "  var selector = $selJson;\n";
+    echo "  var baseOpts = $optJson;\n";
+    echo "  var forms = document.querySelectorAll(selector);\n";
+    echo "  forms.forEach(function (f) {\n";
+    echo "    f.addEventListener('submit', function (e) {\n";
+    echo "      e.preventDefault();\n";
+    echo "\n";
+    echo "      var opts = Object.assign({}, baseOpts);\n";
+    echo "      if (f.dataset.swalIcon) opts.icon = f.dataset.swalIcon;\n";
+    echo "      if (f.dataset.swalTitle) opts.title = f.dataset.swalTitle;\n";
+    echo "      if (f.dataset.swalText) opts.text = f.dataset.swalText;\n";
+    echo "      if (f.dataset.swalConfirm) opts.confirmButtonText = f.dataset.swalConfirm;\n";
+    echo "      if (f.dataset.swalCancel) opts.cancelButtonText = f.dataset.swalCancel;\n";
+    echo "      opts.showCancelButton = true;\n";
+    echo "\n";
+    echo "      if (!window.Swal) {\n";
+    echo "        if (confirm(opts.title || 'Yakin?')) f.submit();\n";
+    echo "        return;\n";
+    echo "      }\n";
+    echo "\n";
+    echo "      Swal.fire(opts).then(function (result) {\n";
+    echo "        if (result && result.isConfirmed) f.submit();\n";
+    echo "      });\n";
+    echo "    });\n";
+    echo "  });\n";
+    echo "});\n";
+    echo "</script>";
+}
+
+// Render a reusable SweetAlert confirm dialog for click actions (buttons/links).
+// The element must provide a callback name via data-swal-callback, e.g.
+//   <button id="btn" data-swal-callback="doSomething">...
+// Then define window.doSomething = function() { ... };
+// Optional overrides via data attributes:
+//   data-swal-title, data-swal-text, data-swal-icon, data-swal-confirm, data-swal-cancel
+function render_swal_confirm_clicks($selector = '.js-swal-confirm-click', array $options = []) {
+    $selector = (string) $selector;
+    if ($selector === '') return;
+
+    $defaults = [
+        'icon' => 'question',
+        'title' => 'Lanjutkan?',
+        'text' => '',
+        'confirmButtonText' => 'Ya',
+        'cancelButtonText' => 'Batal',
+    ];
+    $opts = array_merge($defaults, $options);
+
+    $selJson = json_encode($selector, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+    $optJson = json_encode($opts, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+
+    echo "<script>\n";
+    echo "document.addEventListener('DOMContentLoaded', function () {\n";
+    echo "  var selector = $selJson;\n";
+    echo "  var baseOpts = $optJson;\n";
+    echo "  document.querySelectorAll(selector).forEach(function (el) {\n";
+    echo "    el.addEventListener('click', function (e) {\n";
+    echo "      var target = this;\n";
+    echo "      var cbName = (target.dataset && target.dataset.swalCallback) ? target.dataset.swalCallback : '';\n";
+    echo "      if (!cbName) return;\n";
+    echo "\n";
+    echo "      // always prevent default when callback is specified\n";
+    echo "      e.preventDefault();\n";
+    echo "\n";
+    echo "      var opts = Object.assign({}, baseOpts);\n";
+    echo "      if (target.dataset.swalIcon) opts.icon = target.dataset.swalIcon;\n";
+    echo "      if (target.dataset.swalTitle) opts.title = target.dataset.swalTitle;\n";
+    echo "      if (target.dataset.swalText) opts.text = target.dataset.swalText;\n";
+    echo "      if (target.dataset.swalConfirm) opts.confirmButtonText = target.dataset.swalConfirm;\n";
+    echo "      if (target.dataset.swalCancel) opts.cancelButtonText = target.dataset.swalCancel;\n";
+    echo "      opts.showCancelButton = true;\n";
+    echo "\n";
+    echo "      var cb = (window && typeof window[cbName] === 'function') ? window[cbName] : null;\n";
+    echo "      if (!cb) {\n";
+    echo "        console.warn('Swal callback not found:', cbName);\n";
+    echo "        return;\n";
+    echo "      }\n";
+    echo "\n";
+    echo "      if (!window.Swal) {\n";
+    echo "        if (confirm(opts.title || 'Lanjutkan?')) cb.call(target, e);\n";
+    echo "        return;\n";
+    echo "      }\n";
+    echo "\n";
+    echo "      Swal.fire(opts).then(function (result) {\n";
+    echo "        if (result && result.isConfirmed) cb.call(target, e);\n";
+    echo "      });\n";
+    echo "    });\n";
+    echo "  });\n";
+    echo "});\n";
+    echo "</script>";
 }
 
 // Role helpers
