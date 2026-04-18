@@ -31,16 +31,41 @@ if (!isset($conn)) {
     exit;
 }
 
-$stmt = $conn->prepare('DELETE FROM master_tugas WHERE id = ?');
-if ($stmt) {
-    $stmt->bind_param('i', $id);
-    $stmt->execute();
-    $stmt->close();
-    flash_swal('success','Dihapus','Master tugas dihapus.');
-} else {
-    flash_swal('error','Gagal','Query hapus gagal.');
+// Cek apakah ada pekerjaan yang masih merujuk ke master_tugas ini
+$check = $conn->prepare('SELECT COUNT(*) FROM pekerjaan WHERE master_tugas_id = ?');
+if (!$check) {
+    flash_swal('error','Gagal','Terjadi kesalahan pada pengecekan dependensi.');
+    header('Location: ' . site_url('master_pekerjaan.php'));
+    exit;
+}
+$check->bind_param('i', $id);
+$check->execute();
+$check->bind_result($cnt);
+$check->fetch();
+$check->close();
+
+if ($cnt > 0) {
+    // Pesan untuk user awam, jelas dan singkat
+    $msg = "Master tugas ini tidak dapat dihapus karena ada {$cnt} pekerjaan yang menggunakan tugas ini. Silakan hapus atau ubah tugas pada pekerjaan terkait terlebih dahulu.";
+    flash_swal('error', 'Tidak Bisa Dihapus', $msg);
+    header('Location: ' . site_url('master_pekerjaan.php'));
+    exit;
 }
 
-flash_swal('success', 'Hapus Berhasil', 'Master tugas berhasil terimpan.');
+// Jika tidak ada dependensi, lanjut hapus
+$del = $conn->prepare('DELETE FROM master_tugas WHERE id = ?');
+if ($del) {
+    $del->bind_param('i', $id);
+    if ($del->execute()) {
+        $del->close();
+        flash_swal('success','Dihapus','Master tugas berhasil dihapus.');
+    } else {
+        $del->close();
+        flash_swal('error','Gagal','Gagal menghapus master tugas. Silakan coba lagi.');
+    }
+} else {
+    flash_swal('error','Gagal','Query hapus gagal dibuat.');
+}
+
 header('Location: ' . site_url('master_pekerjaan.php'));
 exit;
