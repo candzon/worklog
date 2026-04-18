@@ -314,6 +314,46 @@ function format_datetime_id($dateTimeStr)
 }
 
 // App signing helpers (used to prevent client-side date manipulation for recurring master occurrences)
+// Reusable pagination renderer
+function render_pagination($totalItems, $itemsPerPage, $currentPage, $baseUrl, $queryParams = []) {
+    $totalPages = ceil($totalItems / $itemsPerPage);
+    if ($totalPages <= 1) return '';
+
+    $currentPage = max(1, min($totalPages, (int)$currentPage));
+    
+    // Build query string excluding 'page'
+    unset($queryParams['page']);
+    $queryString = http_build_query($queryParams);
+    $urlSep = (strpos($baseUrl, '?') === false) ? '?' : '&';
+    $fullBaseUrl = $baseUrl . ($queryString ? $urlSep . $queryString : '');
+    $finalSep = (strpos($fullBaseUrl, '?') === false) ? '?' : '&';
+
+    $html = '<nav aria-label="Page navigation"><ul class="pagination pagination-sm m-0 float-end">';
+    
+    // Previous Button
+    $disabled = ($currentPage <= 1) ? ' disabled' : '';
+    $prevPage = $currentPage - 1;
+    $html .= '<li class="page-item' . $disabled . '"><a class="page-link" href="' . $fullBaseUrl . ($disabled ? '#' : $finalSep . 'page=' . $prevPage) . '">&laquo;</a></li>';
+
+    // Page Numbers (limited to 5 surrounding pages)
+    $start = max(1, $currentPage - 2);
+    $end = min($totalPages, $start + 4);
+    if ($end - $start < 4) $start = max(1, $end - 4);
+
+    for ($i = $start; $i <= $end; $i++) {
+        $active = ($i == $currentPage) ? ' active' : '';
+        $html .= '<li class="page-item' . $active . '"><a class="page-link" href="' . $fullBaseUrl . $finalSep . 'page=' . $i . '">' . $i . '</a></li>';
+    }
+
+    // Next Button
+    $disabled = ($currentPage >= $totalPages) ? ' disabled' : '';
+    $nextPage = $currentPage + 1;
+    $html .= '<li class="page-item' . $disabled . '"><a class="page-link" href="' . $fullBaseUrl . ($disabled ? '#' : $finalSep . 'page=' . $nextPage) . '">&raquo;</a></li>';
+
+    $html .= '</ul></nav>';
+    return $html;
+}
+
 function worklog_app_key() {
     static $key = null;
     if ($key !== null) return $key;
