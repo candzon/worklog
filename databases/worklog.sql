@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS `bagian` (
   PRIMARY KEY (`id_bagian`)
 ) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dumping data for table u9621710_worklog.bagian: ~17 rows (approximately)
+-- Dumping data for table u9621710_worklog.bagian: ~18 rows (approximately)
 REPLACE INTO `bagian` (`id_bagian`, `nama_bagian`, `created_at`) VALUES
 	(1, 'Finance AR', '2026-01-29 00:00:00'),
 	(3, 'Warehouse', '2024-03-18 00:00:00'),
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS `employee` (
 
 -- Dumping data for table u9621710_worklog.employee: ~5 rows (approximately)
 REPLACE INTO `employee` (`npp`, `nama_emp`, `jenis_kelamin`, `telp`, `nama_bagian`, `alamat`, `password`, `role_id`) VALUES
-	('20910012', 'Yudha Amandangi Syahputera', '0', '895635328933', '12', 'Jl. Cucur Timur VI Blok A9 No. 23, Kel. Pondok Karya, Kec Pondok Aren, Tangerang Selatan\r\n', '20910012', 2),
+	('20910012', 'Yudha Amandangi Syahputera', '0', '895635328933', '0', 'Jl. Cucur Timur VI Blok A9 No. 23, Kel. Pondok Karya, Kec Pondok Aren, Tangerang Selatan\r\n', '20910012', 2),
 	('21970019', 'Nur Meinanda Handi Resmana', '1', '85692350910', '12', 'Jl. Anggrek Kp. Bulak RT. 004 RW. 003 Kel. Pondok Kacang Timur Kec. Pondok Aren Banten , Kota Tangerang Selatan\r\n', '21970019', 3),
 	('23920040', 'Isnainul Fajri', '0', '081285957873', '12', 'Kp. Cipedak RT.006/009, Srengseng Sawah, Jagakarsa', '23920040', 3),
 	('249800102', 'Pande Gede Raditya Wira Perdana', '0', '0895366567055', '12', 'Jl. Taman giri perumahan griya nugraha C14 No.284, kel. Benoa. Kec. Kuta selatan, Badung 80361', '249800102', 3),
@@ -101,11 +101,11 @@ CREATE TABLE IF NOT EXISTS `master_tugas` (
   KEY `npp` (`npp`),
   CONSTRAINT `master_tugas_ibfk_1` FOREIGN KEY (`bagian_id`) REFERENCES `bagian` (`id_bagian`),
   CONSTRAINT `master_tugas_ibfk_2` FOREIGN KEY (`npp`) REFERENCES `employee` (`npp`)
-) ENGINE=InnoDB AUTO_INCREMENT=38 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 
 -- Dumping data for table u9621710_worklog.master_tugas: ~1 rows (approximately)
 REPLACE INTO `master_tugas` (`id`, `judul`, `deskripsi`, `npp`, `bagian_id`, `periode`, `target_tgl`, `created_at`, `npp_manager`) VALUES
-	(37, 'asdsa', 'sadads', NULL, 12, 'bulanan', '2026-04-30', '2026-04-18 11:40:16', '20910012');
+	(50, 'testttt', 'testtt', NULL, 12, 'bulanan', '2026-04-22', '2026-04-22 10:00:59', '20910012');
 
 -- Dumping structure for table u9621710_worklog.master_tugas_detail
 CREATE TABLE IF NOT EXISTS `master_tugas_detail` (
@@ -118,15 +118,14 @@ CREATE TABLE IF NOT EXISTS `master_tugas_detail` (
   KEY `fk_employee_npp` (`npp`),
   CONSTRAINT `fk_employee_npp` FOREIGN KEY (`npp`) REFERENCES `employee` (`npp`) ON DELETE CASCADE,
   CONSTRAINT `fk_master_tugas` FOREIGN KEY (`master_tugas_id`) REFERENCES `master_tugas` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table u9621710_worklog.master_tugas_detail: ~5 rows (approximately)
+-- Dumping data for table u9621710_worklog.master_tugas_detail: ~4 rows (approximately)
 REPLACE INTO `master_tugas_detail` (`id`, `master_tugas_id`, `npp`, `created_at`) VALUES
-	(1, 37, '20910012', '2026-04-18 04:40:16'),
-	(2, 37, '21970019', '2026-04-18 04:40:16'),
-	(3, 37, '23920040', '2026-04-18 04:40:16'),
-	(4, 37, '249800102', '2026-04-18 04:40:16'),
-	(5, 37, '24990080', '2026-04-18 04:40:16');
+	(49, 50, '21970019', '2026-04-22 03:28:28'),
+	(50, 50, '23920040', '2026-04-22 03:28:28'),
+	(51, 50, '249800102', '2026-04-22 03:28:28'),
+	(52, 50, '24990080', '2026-04-22 03:28:28');
 
 -- Dumping structure for table u9621710_worklog.pekerjaan
 CREATE TABLE IF NOT EXISTS `pekerjaan` (
@@ -136,10 +135,10 @@ CREATE TABLE IF NOT EXISTS `pekerjaan` (
   `created_by_npp` varchar(20) NOT NULL,
   `nama_emp` varchar(150) DEFAULT NULL,
   `assigned_to_npp` varchar(20) DEFAULT NULL,
-  `bagian_penerima` varchar(50) DEFAULT NULL,
   `tgl_mulai` date DEFAULT NULL,
   `tgl_selesai` date DEFAULT NULL,
   `status` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT 'open',
+  `lampiran` varchar(255) DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL,
   `master_tugas_id` int DEFAULT NULL,
@@ -149,7 +148,10 @@ CREATE TABLE IF NOT EXISTS `pekerjaan` (
   CONSTRAINT `pekerjaan_ibfk_1` FOREIGN KEY (`master_tugas_id`) REFERENCES `master_tugas` (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table u9621710_worklog.pekerjaan: ~0 rows (approximately)
+-- Dumping data for table u9621710_worklog.pekerjaan: ~2 rows (approximately)
+REPLACE INTO `pekerjaan` (`id`, `judul`, `deskripsi`, `created_by_npp`, `nama_emp`, `assigned_to_npp`, `tgl_mulai`, `tgl_selesai`, `status`, `lampiran`, `created_at`, `updated_at`, `master_tugas_id`, `periode`) VALUES
+	(1, 'asdas', 'sadsad', '20910012', 'Yudha Amandangi Syahputera', '21970019', '2026-04-22', '2026-04-24', 'open', NULL, '2026-04-22 10:13:03', NULL, NULL, 'manual'),
+	(2, 'testttt', 'testtt', '20910012', 'Yudha Amandangi Syahputera', '21970019', '2026-04-22', '2026-04-22', 'done', 'done_1776828199_2f836cf4.png', '2026-04-22 10:23:19', NULL, 50, 'bulanan');
 
 -- Dumping structure for table u9621710_worklog.roles
 CREATE TABLE IF NOT EXISTS `roles` (

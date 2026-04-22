@@ -1,58 +1,47 @@
 <?php
 require_once __DIR__ . '/../functions/helpers.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../models/MasterModel.php';
+
 ensure_session_started();
+header('Content-Type: application/json; charset=utf-8');
+
+$npp_session = $_SESSION['npp'] ?? null;
+if (empty($npp_session)) { 
+    http_response_code(401); echo json_encode(['success'=>false, 'message'=>'Sesi habis.']); exit; 
+}
+
+// Re-check Manager Role
+$stmtR = $conn->prepare("SELECT role_id FROM employee WHERE npp = ?");
+$stmtR->bind_param('s', $npp_session);
+$stmtR->execute();
+$resR = $stmtR->get_result()->fetch_assoc();
+$isAuthorized = ($resR && ($resR['role_id'] == 1 || $resR['role_id'] == 2));
+
+if (!$isAuthorized) {
+    http_response_code(403); echo json_encode(['success'=>false, 'message'=>'Forbidden: Akses ditolak.']); exit;
+}
 
 $id = !empty($_POST['id']) ? intval($_POST['id']) : null;
-$judul = trim($_POST['judul'] ?? '');
-$deskripsi = trim($_POST['deskripsi'] ?? '');
-$periode = $_POST['periode'] ?? 'bulanan';
-$target_tgl = !empty($_POST['target_tgl']) ? $_POST['target_tgl'] : null;
 $bagian_id = !empty($_POST['bagian_id']) ? intval($_POST['bagian_id']) : null;
 
-if (!$id || $judul === '' || !$target_tgl || !$bagian_id) {
-    flash_swal('error','Gagal','Semua field wajib diisi.');
-    header('Location: ' . site_url('master_pekerjaan.php'));
-    exit;
+$data = [
+    'judul' => trim($_POST['judul'] ?? ''),
+    'deskripsi' => trim($_POST['deskripsi'] ?? ''),
+    'periode' => $_POST['periode'] ?? 'bulanan',
+    'target_tgl' => $_POST['target_tgl'] ?? null,
+    'bagian_id' => $bagian_id
+];
+
+if (!$id || empty($data['judul']) || !$bagian_id) {
+    http_response_code(400); echo json_encode(['success'=>false, 'message'=>'Data tidak lengkap.']); exit;
 }
 
-// 1. Update baris Master Utama
-$stmt = $conn->prepare("UPDATE master_tugas SET judul = ?, deskripsi = ?, periode = ?, target_tgl = ?, bagian_id = ?, npp = NULL WHERE id = ?");
-if ($stmt) {
-    $stmt->bind_param('ssssii', $judul, $deskripsi, $periode, $target_tgl, $bagian_id, $id);
-    if ($stmt->execute()) {
-        
-        // 2. Hapus detail penugasan lama
-        $stmtDel = $conn->prepare("DELETE FROM master_tugas_detail WHERE master_tugas_id = ?");
-        $stmtDel->bind_param('i', $id);
-        $stmtDel->execute();
-        $stmtDel->close();
-
-        // 3. Cari NPP baru: Mencocokkan bagian_id dengan KOLOM nama_bagian
-        $sqlEmp = "SELECT npp FROM employee WHERE nama_bagian = ?";
-        $stmtEmp = $conn->prepare($sqlEmp);
-        $s_bagian_id = (string)$bagian_id;
-        $stmtEmp->bind_param('s', $s_bagian_id);
-        $stmtEmp->execute();
-        $resEmp = $stmtEmp->get_result();
-
-        // 4. Masukkan kembali detail
-        $stmtDetail = $conn->prepare('INSERT INTO master_tugas_detail (master_tugas_id, npp) VALUES (?, ?)');
-        $count = 0;
-        while ($row = $resEmp->fetch_assoc()) {
-            $npp_to_add = $row['npp'];
-            $stmtDetail->bind_param('is', $id, $npp_to_add);
-            if ($stmtDetail->execute()) $count++;
-        }
-        $stmtDetail->close();
-        $stmtEmp->close();
-
-        flash_swal('success','Tersimpan','Master tugas diperbarui untuk ' . $count . ' pegawai.');
-    } else {
-        flash_swal('error','Gagal','DB Error: ' . $conn->error);
-    }
-    $stmt->close();
+$model = new MasterModel($conn);
+if ($model->update($id, $data)) {
+    $model->syncDetails($id, $bagian_id);
+    echo json_encode(['success' => true, 'message' => 'Master tugas berhasil diperbarui.']);
+} else {
+    http_response_code(500); echo json_encode(['success' => false, 'message' => 'Gagal memperbarui database.']);
 }
-
-header('Location: ' . site_url('master_pekerjaan.php'));
 exit;
