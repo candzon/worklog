@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $errors[] = 'Gagal menyiapkan penyimpanan.';
         }
-    } else {
+    } else if (!isset($conn)) {
         $errors[] = 'Koneksi database tidak tersedia.';
     }
 }
@@ -278,16 +278,14 @@ if (isset($conn)) {
                         var status = props.status || '';
                         var assigned = props.ditugaskan || '';
                         var assignedName = props.assigned_name || '';
-                        var reporter = props.reporter_name || props.reporter_npp || '';
-                        var reporterRole = (props.reporter_role || '').toString();
+                        var reporter = props.reporter_name || 'Manager';
                         var tglMulai = props.tgl_mulai || ev.startStr || '';
                         var tglSelesai = props.tgl_selesai || '';
                         var doneAt = props.done_at || '';
 
-                        var assignedLabel = assigned ? (assignedName ? (assignedName + ' (' + assigned + ')') : assigned) : '-';
-                        if (!reporter && reporterRole.toLowerCase() === 'manager') reporter = 'Manager';
-                        var reporterLabel = reporter ? reporter : '-';
-                        if (reporterLabel !== '-' && reporterRole) reporterLabel = reporterLabel + ' (' + reporterRole + ')';
+                        var assignedLabel = assignedName ? (assignedName + ' (' + assigned + ')') : (assigned || '-');
+                        var reporterLabel = reporter;
+                        
                         var mulaiText = tglMulai;
                         var selesaiText = tglSelesai;
                         var tanggalText = tglSelesai ? (mulaiText + ' — ' + selesaiText) : mulaiText;
@@ -344,6 +342,30 @@ if (isset($conn)) {
                             } else {
                                 doneAtEl.textContent = '-';
                                 doneRow.classList.add('d-none');
+                            }
+                        }
+
+                        var uploadRow = document.getElementById('pj_detail_upload_row');
+                        var fileInput = document.getElementById('pj_detail_file');
+                        var fileView = document.getElementById('pj_detail_file_view');
+                        var fileLink = document.getElementById('pj_detail_file_link');
+                        
+                        if (uploadRow) {
+                            uploadRow.classList.remove('d-none');
+                            if (status === 'done') {
+                                if (fileInput) fileInput.classList.add('d-none');
+                                if (props.lampiran) {
+                                    fileView.classList.remove('d-none');
+                                    fileLink.href = '<?php echo base_path(); ?>/uploads/' + props.lampiran;
+                                } else {
+                                    fileView.classList.add('d-none');
+                                }
+                            } else {
+                                if (fileInput) {
+                                    fileInput.classList.remove('d-none');
+                                    fileInput.value = '';
+                                }
+                                fileView.classList.add('d-none');
                             }
                         }
 
@@ -548,20 +570,28 @@ if (isset($conn)) {
 
                             <div class="list-group list-group-flush">
                                 <div class="list-group-item px-0">
-                                    <div class="text-uppercase text-body-secondary small">Ditugaskan</div>
+                                    <div class="text-uppercase text-body-secondary small">DITUGASKAN</div>
                                     <div class="fw-semibold" id="pj_detail_assigned">-</div>
                                 </div>
                                 <div class="list-group-item px-0">
-                                    <div class="text-uppercase text-body-secondary small">Koordinator</div>
+                                    <div class="text-uppercase text-body-secondary small">KOORDINATOR</div>
                                     <div class="fw-semibold" id="pj_detail_reporter">-</div>
                                 </div>
                                 <div class="list-group-item px-0">
-                                    <div class="text-uppercase text-body-secondary small">Deskripsi</div>
+                                    <div class="text-uppercase text-body-secondary small">DESKRIPSI</div>
                                     <div id="pj_detail_desc" class="mt-1">-</div>
                                 </div>
-                                <div class="list-group-item px-0" id="pj_detail_done_row">
-                                    <div class="text-uppercase text-body-secondary small">Waktu Tugas Selesai</div>
+                                <div class="list-group-item px-0 d-none" id="pj_detail_done_row">
+                                    <div class="text-uppercase text-body-secondary small">WAKTU TUGAS SELESAI</div>
                                     <div class="fw-semibold" id="pj_detail_done_at">-</div>
+                                </div>
+                                <!-- File Upload Section -->
+                                <div class="list-group-item px-0 d-none" id="pj_detail_upload_row">
+                                    <div class="text-uppercase text-body-secondary small">LAMPIRAN BUKTI (Min 2MB)</div>
+                                    <input type="file" id="pj_detail_file" class="form-control mt-1">
+                                    <div id="pj_detail_file_view" class="mt-2 d-none">
+                                        <a id="pj_detail_file_link" href="#" target="_blank" class="btn btn-xs btn-outline-info">Lihat Lampiran Bukti</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -694,14 +724,33 @@ if (isset($conn)) {
                             alertEl.textContent = text;
                         }
 
+                        var fileInput = document.getElementById('pj_detail_file');
+                        if (!fileInput || !fileInput.files[0]) {
+                            showAlert('danger', 'Mohon pilih file bukti pekerjaan terlebih dahulu.');
+                            return;
+                        }
+                        
+                        var file = fileInput.files[0];
+                        if (file.size > 2 * 1024 * 1024) { // Maksimal 2MB
+                            showAlert('danger', 'Ukuran file terlalu besar. Maksimal 2MB.');
+                            return;
+                        }
+
+                        var fd = new FormData();
+                        if (isMaster) {
+                            fd.append('master_tugas_id', masterId);
+                            fd.append('tgl_mulai', occDate);
+                            fd.append('token', occToken);
+                        } else {
+                            fd.append('id', id);
+                        }
+                        fd.append('lampiran', file);
+
                         btn.disabled = true;
                         fetch('<?php echo site_url("api/mark_done.php"); ?>', {
                             method: 'POST',
                             credentials: 'same-origin',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-                            body: isMaster
-                                ? new URLSearchParams({ master_tugas_id: masterId, tgl_mulai: occDate, token: occToken })
-                                : new URLSearchParams({ id: id })
+                            body: fd
                         })
                             .then(function (r) { return r.json(); })
                             .then(function (json) {
@@ -728,43 +777,6 @@ if (isset($conn)) {
                     };
                 })();
             </script>
-
-            <!-- <div class="card">
-                <div class="card-header">Pekerjaan Terbaru</div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-striped mb-0">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Judul</th>
-                                    <th>Deskripsi</th>
-                                    <th>Selesai</th>
-                                    <th>Pelapor</th>
-                                    <th>Waktu</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($rows)): ?>
-                                    <tr>
-                                        <td colspan="6" class="text-center small text-muted">Belum ada pekerjaan.</td>
-                                    </tr>
-                                <?php else:
-                                    foreach ($rows as $r): ?>
-                                        <tr>
-                                            <td><?php echo e($r['id']); ?></td>
-                                            <td><?php echo e($r['judul']); ?></td>
-                                            <td><?php echo e(mb_strimwidth($r['deskripsi'], 0, 120, '...')); ?></td>
-                                            <td><?php echo e(($r['tgl_selesai'] ?? '') ? format_date_id($r['tgl_selesai']) : '-'); ?></td>
-                                            <td><?php echo e($r['nama_emp'] ?: $r['npp']); ?></td>
-                                            <td><?php echo e(format_datetime_id($r['created_at'])); ?></td>
-                                        </tr>
-                                    <?php endforeach; endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div> -->
 
         </div>
     </div>

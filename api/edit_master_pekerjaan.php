@@ -3,79 +3,56 @@ require_once __DIR__ . '/../functions/helpers.php';
 require_once __DIR__ . '/../config/database.php';
 ensure_session_started();
 
-$nppSession = $_SESSION['npp'] ?? null;
-if (empty($nppSession)) {
-    flash_swal('error','Unauthorized','Anda harus login.');
-    header('Location: ' . site_url('master_pekerjaan.php'));
-    exit;
-}
-
-$roleName = function_exists('get_current_role_name') ? get_current_role_name($conn ?? null) : null;
-$isManager = function_exists('role_is') ? role_is($roleName, 'manager') : (strtolower((string)$roleName) === 'manager');
-if (!$isManager) {
-    flash_swal('error','Forbidden','Akses ditolak.');
-    header('Location: ' . site_url('master_pekerjaan.php'));
-    exit;
-}
-
 $id = !empty($_POST['id']) ? intval($_POST['id']) : null;
 $judul = trim($_POST['judul'] ?? '');
 $deskripsi = trim($_POST['deskripsi'] ?? '');
-$npp = trim($_POST['npp'] ?? '');
-$bagian_id = (isset($_POST['bagian_id']) && $_POST['bagian_id'] !== '') ? intval($_POST['bagian_id']) : null;
 $periode = $_POST['periode'] ?? 'bulanan';
+$target_tgl = !empty($_POST['target_tgl']) ? $_POST['target_tgl'] : null;
+$bagian_id = !empty($_POST['bagian_id']) ? intval($_POST['bagian_id']) : null;
 
-if ($judul === '') {
-    flash_swal('error','Gagal','Judul wajib diisi.');
+if (!$id || $judul === '' || !$target_tgl || !$bagian_id) {
+    flash_swal('error','Gagal','Semua field wajib diisi.');
     header('Location: ' . site_url('master_pekerjaan.php'));
     exit;
 }
 
-if (!isset($conn)) {
-    flash_swal('error','DB Error','Koneksi database tidak tersedia.');
-    header('Location: ' . site_url('master_pekerjaan.php'));
-    exit;
+// 1. Update baris Master Utama
+$stmt = $conn->prepare("UPDATE master_tugas SET judul = ?, deskripsi = ?, periode = ?, target_tgl = ?, bagian_id = ?, npp = NULL WHERE id = ?");
+if ($stmt) {
+    $stmt->bind_param('ssssii', $judul, $deskripsi, $periode, $target_tgl, $bagian_id, $id);
+    if ($stmt->execute()) {
+        
+        // 2. Hapus detail penugasan lama
+        $stmtDel = $conn->prepare("DELETE FROM master_tugas_detail WHERE master_tugas_id = ?");
+        $stmtDel->bind_param('i', $id);
+        $stmtDel->execute();
+        $stmtDel->close();
+
+        // 3. Cari NPP baru: Mencocokkan bagian_id dengan KOLOM nama_bagian
+        $sqlEmp = "SELECT npp FROM employee WHERE nama_bagian = ?";
+        $stmtEmp = $conn->prepare($sqlEmp);
+        $s_bagian_id = (string)$bagian_id;
+        $stmtEmp->bind_param('s', $s_bagian_id);
+        $stmtEmp->execute();
+        $resEmp = $stmtEmp->get_result();
+
+        // 4. Masukkan kembali detail
+        $stmtDetail = $conn->prepare('INSERT INTO master_tugas_detail (master_tugas_id, npp) VALUES (?, ?)');
+        $count = 0;
+        while ($row = $resEmp->fetch_assoc()) {
+            $npp_to_add = $row['npp'];
+            $stmtDetail->bind_param('is', $id, $npp_to_add);
+            if ($stmtDetail->execute()) $count++;
+        }
+        $stmtDetail->close();
+        $stmtEmp->close();
+
+        flash_swal('success','Tersimpan','Master tugas diperbarui untuk ' . $count . ' pegawai.');
+    } else {
+        flash_swal('error','Gagal','DB Error: ' . $conn->error);
+    }
+    $stmt->close();
 }
 
-$hasMasterNppManagerCol = false;
-$colRes = $conn->query("SHOW COLUMNS FROM master_tugas LIKE 'npp_manager'");
-if ($colRes) { $hasMasterNppManagerCol = ($colRes->num_rows > 0); $colRes->free(); }
-
-if ($id) {
-    $stmt = $conn->prepare("UPDATE master_tugas SET judul = ?, deskripsi = ?, npp = ?, bagian_id = ?, periode = ? WHERE id = ?");
-    if ($stmt) {
-        $stmt->bind_param('sssisi', $judul, $deskripsi, $npp, $bagian_id, $periode, $id);
-        $stmt->execute();
-        $stmt->close();
-        flash_swal('success','Tersimpan','Master tugas diperbarui.');
-    } else {
-        flash_swal('error','Gagal','Query update gagal.');
-    }
-} else {
-    if ($hasMasterNppManagerCol) {
-        $npp_manager = $_SESSION['npp'] ?? null;
-        $stmt = $conn->prepare("INSERT INTO master_tugas (judul, deskripsi, npp, bagian_id, periode, npp_manager, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-        if ($stmt) {
-            $stmt->bind_param('sssiss', $judul, $deskripsi, $npp, $bagian_id, $periode, $npp_manager);
-            $stmt->execute();
-            $stmt->close();
-            flash_swal('success','Tersimpan','Master tugas ditambahkan.');
-        } else {
-            flash_swal('error','Gagal','Query insert gagal.');
-        }
-    } else {
-        $stmt = $conn->prepare("INSERT INTO master_tugas (judul, deskripsi, npp, bagian_id, periode, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
-        if ($stmt) {
-            $stmt->bind_param('sssis', $judul, $deskripsi, $npp, $bagian_id, $periode);
-            $stmt->execute();
-            $stmt->close();
-            flash_swal('success','Tersimpan','Master tugas ditambahkan.');
-        } else {
-            flash_swal('error','Gagal','Query insert gagal.');
-        }
-    }
-}
-
-flash_swal('success', 'Edit Berhasil', 'Master tugas berhasil disimpan.');
 header('Location: ' . site_url('master_pekerjaan.php'));
 exit;

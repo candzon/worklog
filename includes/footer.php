@@ -8,7 +8,7 @@ require_login();
 	<!-- /.app-wrapper -->
 
 	<footer class="app-footer">
-		<strong>&copy; <?= date('Y') ?> Worklog</strong>
+		<strong>&copy; 2026 TIM IT Production</strong>
 	</footer>
 
 	<!-- Core scripts -->
