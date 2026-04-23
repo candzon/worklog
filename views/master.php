@@ -1,50 +1,110 @@
 <!-- views/master.php -->
+<style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; }
+    .card { border-radius: 16px; border: none; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+    .table thead th { background: #f1f5f9; color: #475569; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border: none; padding: 16px; }
+    .table tbody td { padding: 16px; vertical-align: middle; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+    .btn-primary { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border: none; border-radius: 10px; padding: 8px 20px; font-weight: 600; }
+    .btn-outline-primary { border-radius: 10px; border-color: #3b82f6; color: #3b82f6; font-weight: 600; }
+    .btn-danger { border-radius: 10px; }
+    .badge-info { background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .badge-periode { background: #f1f5f9; color: #475569; padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; border: 1px solid #e2e8f0; }
+    .modal-content { border-radius: 24px; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+    .form-control, .form-select { border-radius: 12px; border: 1.5px solid #e2e8f0; padding: 12px 16px; font-size: 14px; }
+    .form-control:focus { box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1); border-color: #3b82f6; }
+</style>
+
 <div class="app-main">
     <div class="app-content p-4">
         <div class="container-fluid">
-            <h3 class="mb-3">Master Pekerjaan </h3>
-            <div class="mb-3">
-                <button type="button" class="btn btn-primary" id="btnAddNewMaster">Buat Master Baru</button>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="fw-bold mb-0">Master Pekerjaan</h3>
+                    <p class="text-muted small mb-0">Atur template tugas rutin yang akan otomatis didistribusikan ke bagian terkait.</p>
+                </div>
+                <button type="button" class="btn btn-primary shadow-sm" id="btnAddNewMaster">
+                    <i class="bi bi-plus-circle-fill me-2"></i> Buat Master Baru
+                </button>
             </div>
 
             <div class="card">
-                <div class="card-body p-0 table-responsive">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr><th>#</th><th>Judul</th><th>Periode</th><th>Target Tgl</th><th>Bagian Penerima</th><th>Aksi</th></tr>
-                        </thead>
-                        <tbody id="masterTableBody">
-                            <?php include __DIR__ . '/../api/get_master_list.php'; ?>
-                        </tbody>
-                    </table>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">ID</th>
+                                    <th>Judul Pekerjaan Rutin</th>
+                                    <th>Periode</th>
+                                    <th>Tgl Target</th>
+                                    <th>Penerima (Bagian)</th>
+                                    <th class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="masterTableBody">
+                                <?php include __DIR__ . '/../api/get_master_list.php'; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer bg-white border-0 py-3" id="master-pagination">
+                    <?php if (isset($totalPages) && $totalPages > 1): ?>
+                        <?php echo render_pagination($totalRows, $perPage, $page, site_url('master_pekerjaan.php'), $_GET); ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal Form -->
 <div class="modal fade" id="modalMaster" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header"><h5>Form Master Pekerjaan</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="fw-bold"><i class="bi bi-journal-plus me-2 text-primary"></i> Konfigurasi Master Tugas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
                 <div id="modalAlert" class="alert d-none"></div>
                 <form id="formMaster">
                     <input type="hidden" name="id" id="fieldId">
-                    <div class="mb-3"><label class="form-label">Judul</label><input name="judul" id="fieldJudul" class="form-control" required></div>
-                    <div class="mb-3"><label class="form-label">Deskripsi</label><textarea name="deskripsi" id="fieldDeskripsi" class="form-control" rows="3"></textarea></div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">JUDUL PEKERJAAN</label>
+                        <input name="judul" id="fieldJudul" class="form-control" placeholder="Contoh: Stok Opname Barang Masuk" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">DESKRIPSI TUGAS</label>
+                        <textarea name="deskripsi" id="fieldDeskripsi" class="form-control" rows="3" placeholder="Jelaskan detail instruksi tugas di sini..."></textarea>
+                    </div>
                     <div class="row g-3">
-                        <div class="col-md-4"><label class="form-label">Periode</label><select name="periode" id="fieldPeriode" class="form-select"><option value="bulanan">Bulanan</option></select></div>
-                        <div class="col-md-4"><label class="form-label">Tanggal Target</label><input type="date" name="target_tgl" id="fieldTargetTgl" class="form-control" required></div>
-                        <div class="col-md-4"><label class="form-label">Bagian Penerima</label>
-                            <select name="bagian_id" id="fieldBagianId" class="form-select" required><option value="">- Pilih Bagian -</option>
-                                <?php foreach ($bagians as $bag): ?><option value="<?php echo e($bag['id_bagian']); ?>"><?php echo e($bag['nama_bagian']); ?></option><?php endforeach; ?>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small">PERIODE</label>
+                            <select name="periode" id="fieldPeriode" class="form-select">
+                                <option value="bulanan">BULANAN</option>
+                                <option value="harian">HARIAN</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small">TANGGAL TARGET</label>
+                            <input type="date" name="target_tgl" id="fieldTargetTgl" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold small">BAGIAN PENERIMA</label>
+                            <select name="bagian_id" id="fieldBagianId" class="form-select" required>
+                                <option value="">- PILIH BAGIAN -</option>
+                                <?php foreach ($bagians as $bag): ?>
+                                    <option value="<?php echo e($bag['id_bagian']); ?>"><?php echo strtoupper($bag['nama_bagian']); ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="button" id="btnSaveMaster" class="btn btn-primary">Simpan</button></div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                <button type="button" id="btnSaveMaster" class="btn btn-primary">Simpan Master</button>
+            </div>
         </div>
     </div>
 </div>
@@ -90,61 +150,54 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         if (btnDelete) {
-            if (window.Swal) {
-                Swal.fire({ title: 'Hapus Master?', text: 'Data tidak bisa dikembalikan!', icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya, Hapus' }).then((result) => {
-                    if (result.isConfirmed) executeDelete(btnDelete.dataset.id);
-                });
-            } else if (confirm('Yakin ingin menghapus?')) {
-                executeDelete(btnDelete.dataset.id);
-            }
+            Swal.fire({
+                title: 'Hapus Master?',
+                text: "Penugasan otomatis ke pegawai akan dihentikan.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Hapus'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const id = btnDelete.dataset.id;
+                    fetch('api/hapus_master_pekerjaan.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'id=' + id
+                    })
+                    .then(async r => {
+                        const res = await r.json();
+                        if (!r.ok) {
+                            if (res.type === 'restricted') {
+                                Swal.fire({ title: 'Gagal', text: res.message, icon: 'error' });
+                            } else {
+                                throw new Error(res.message);
+                            }
+                            return null;
+                        }
+                        return res;
+                    })
+                    .then(res => { 
+                        if(res && res.success) {
+                            refreshTable(); 
+                            Swal.fire({ title: 'Terhapus', text: 'Data master berhasil dihapus.', icon: 'success', timer: 1000, showConfirmButton: false });
+                        }
+                    })
+                    .catch(err => Swal.fire('Error', err.message, 'error'));
+                }
+            });
         }
     });
-
-    function executeDelete(id) {
-        fetch('api/hapus_master_pekerjaan.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'id=' + id
-        })
-        .then(async r => {
-            const res = await r.json();
-            if (!r.ok) {
-                if (res.type === 'restricted') {
-                    Swal.fire({ title: 'Gagal Menghapus', text: res.message, icon: 'error', confirmButtonColor: '#3b82f6' });
-                } else {
-                    throw new Error(res.message || 'Server error');
-                }
-                return null;
-            }
-            return res;
-        })
-        .then(res => { 
-            if(res && res.success) {
-                refreshTable(); 
-                Swal.fire({ title: 'Terhapus', text: 'Data master berhasil dihapus.', icon: 'success', timer: 1500, showConfirmButton: false });
-            }
-        })
-        .catch(err => {
-            if (err.message) Swal.fire('Error', err.message, 'error');
-        });
-    }
 
     document.getElementById('btnSaveMaster').addEventListener('click', function() {
         if (!formEl.checkValidity()) { formEl.reportValidity(); return; }
         
-        if (window.Swal) {
-            Swal.fire({ title: 'Simpan Data?', text: 'Pastikan data sudah benar.', icon: 'question', showCancelButton: true, confirmButtonText: 'Ya, Simpan' }).then((result) => {
-                if (result.isConfirmed) executeSave();
-            });
-        } else {
-            executeSave();
-        }
-    });
-
-    function executeSave() {
-        const url = (currentMode === 'edit') ? 'api/edit_master_pekerjaan.php' : 'api/create_master_pekerjaan.php';
-        const btn = document.getElementById('btnSaveMaster');
+        const btn = this;
+        const originalText = btn.innerHTML;
         btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses...';
+
+        const url = (currentMode === 'edit') ? 'api/edit_master_pekerjaan.php' : 'api/create_master_pekerjaan.php';
 
         fetch(url, { method: 'POST', body: new FormData(formEl) })
             .then(async r => {
@@ -155,14 +208,17 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(res => {
                 modal.hide();
                 refreshTable();
-                if (window.Swal) Swal.fire('Berhasil', res.message, 'success');
+                Swal.fire({ icon: 'success', title: 'Berhasil', text: res.message, timer: 1500, showConfirmButton: false });
             })
             .catch(err => {
                 alertEl.textContent = err.message;
                 alertEl.classList.remove('d-none');
                 alertEl.classList.add('alert-danger');
             })
-            .finally(() => { btn.disabled = false; });
-    }
+            .finally(() => { 
+                btn.disabled = false; 
+                btn.innerHTML = originalText;
+            });
+    });
 });
 </script>

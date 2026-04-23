@@ -42,6 +42,12 @@ $isManager = function_exists('role_is') ? role_is($roleName, 'manager') : (strto
                   <p>Pekerjaan</p>
                 </a>
               </li>
+              <li class="nav-item">
+                <a href="<?php echo site_url('daftar_akun.php'); ?>" class="nav-link <?php echo $currentPage === 'daftar_akun.php' ? 'active' : ''; ?>">
+                  <i class="nav-icon bi bi-people"></i>
+                  <p>Akun Pegawai</p>
+                </a>
+              </li>
             </ul>
           </li>
         <?php endif; ?>

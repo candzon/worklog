@@ -9,6 +9,15 @@ require_once __DIR__ . '/../models/AccountModel.php';
 
 ensure_session_started();
 
+$roleId = $_SESSION['role_id'] ?? null;
+$roleName = $_SESSION['role_name'] ?? null;
+$isAuthorized = ($roleId == 1 || $roleId == 2 || strtolower((string)$roleName) === 'admin' || strtolower((string)$roleName) === 'manager');
+
+if (!$isAuthorized) {
+    http_response_code(403);
+    exit;
+}
+
 $model = new AccountModel($conn);
 $perPage = 20;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;

@@ -9,6 +9,16 @@ require_once __DIR__ . '/../models/AccountModel.php';
 ensure_session_started();
 header('Content-Type: application/json; charset=utf-8');
 
+$roleId = $_SESSION['role_id'] ?? null;
+$roleName = $_SESSION['role_name'] ?? null;
+$isAuthorized = ($roleId == 1 || $roleId == 2 || strtolower((string)$roleName) === 'admin' || strtolower((string)$roleName) === 'manager');
+
+if (!$isAuthorized) {
+    http_response_code(403);
+    echo json_encode(['success'=>false, 'message'=>'Akses Ditolak.']);
+    exit;
+}
+
 $model = new AccountModel($conn);
 $action = $_GET['action'] ?? '';
 
