@@ -29,18 +29,20 @@ $isManager = ($roleId == 1 || $roleId == 2 || strtolower((string)$roleName) === 
 
 // 2. Pengambilan Data via Model (Aman dari error bool)
 $model = new DashboardModel($conn);
-$currentMonth = date('Y-m');
 
-$counts = $model->getCounts($isManager, $currentNpp, $currentMonth);
-$recent = $model->getRecentTasks($isManager, $currentNpp);
+// Filter Periode
+$selectedMonth = $_GET['bulan'] ?? date('m');
+$selectedYear = $_GET['tahun'] ?? date('Y');
+$selectedStatus = $_GET['status_tugas'] ?? 'semua';
+$currentMonth = "$selectedYear-$selectedMonth";
 
 // Pagination untuk Tabel Progres
 $itemsPerPage = 10;
 $currentPage = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($currentPage - 1) * $itemsPerPage;
 
-$totalUserProgress = $model->getTotalEmployees($isManager, $currentNpp);
-$userProgress = $model->getUserProgress($isManager, $currentNpp, $currentMonth, $itemsPerPage, $offset);
+$totalUserProgress = $model->getTotalEmployees($isManager, $currentNpp, $selectedStatus, $currentMonth);
+$userProgress = $model->getUserProgress($isManager, $currentNpp, $currentMonth, $itemsPerPage, $offset, $selectedStatus);
 
 // 3. Render Tampilan
 require_once __DIR__ . '/includes/header.php';

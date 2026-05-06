@@ -262,6 +262,7 @@ if (isset($conn)) {
                     var isMobile = viewportWidth < 576; // match CSS mobile breakpoint
                     var initialView = isMobile ? 'listWeek' : 'dayGridMonth';
                     var headerRight = isMobile ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek,listWeek';
+                    var initialDate = new Date().toISOString().split('T')[0]; // Default hari ini
 
                     function showEventDetail(ev) {
                         function escapeHtml(s) {
@@ -376,6 +377,7 @@ if (isset($conn)) {
 
                     var calendar = new FullCalendar.Calendar(el, {
                         initialView: initialView,
+                        initialDate: initialDate,
                         customButtons: {
                             addPekerjaan: { text: 'Tambah Pekerjaan', click: function () { window.openPekerjaanModal(); } }
                         },
@@ -574,7 +576,7 @@ if (isset($conn)) {
                                     <div class="fw-semibold" id="pj_detail_assigned">-</div>
                                 </div>
                                 <div class="list-group-item px-0">
-                                    <div class="text-uppercase text-body-secondary small">KOORDINATOR</div>
+                                    <div class="text-uppercase text-body-secondary small">MANAGER</div>
                                     <div class="fw-semibold" id="pj_detail_reporter">-</div>
                                 </div>
                                 <div class="list-group-item px-0">

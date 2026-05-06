@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS `bagian` (
   PRIMARY KEY (`id_bagian`)
 ) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- Dumping data for table u9621710_worklog.bagian: ~18 rows (approximately)
+-- Dumping data for table u9621710_worklog.bagian: ~17 rows (approximately)
 REPLACE INTO `bagian` (`id_bagian`, `nama_bagian`, `created_at`) VALUES
 	(1, 'Finance AR', '2026-01-29 00:00:00'),
 	(3, 'Warehouse', '2024-03-18 00:00:00'),
@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS `employee` (
 
 -- Dumping data for table u9621710_worklog.employee: ~5 rows (approximately)
 REPLACE INTO `employee` (`npp`, `nama_emp`, `jenis_kelamin`, `telp`, `nama_bagian`, `alamat`, `password`, `role_id`) VALUES
+	('12345678', 'RGS', '0', '081823912', '24', NULL, '12345678', 3),
 	('20910012', 'Yudha Amandangi Syahputera', '0', '895635328933', '0', 'Jl. Cucur Timur VI Blok A9 No. 23, Kel. Pondok Karya, Kec Pondok Aren, Tangerang Selatan\r\n', '20910012', 2),
 	('21970019', 'Nur Meinanda Handi Resmana', '1', '85692350910', '12', 'Jl. Anggrek Kp. Bulak RT. 004 RW. 003 Kel. Pondok Kacang Timur Kec. Pondok Aren Banten , Kota Tangerang Selatan\r\n', '21970019', 3),
 	('23920040', 'Isnainul Fajri', '0', '081285957873', '12', 'Kp. Cipedak RT.006/009, Srengseng Sawah, Jagakarsa', '23920040', 3),
@@ -92,7 +93,7 @@ CREATE TABLE IF NOT EXISTS `master_tugas` (
   `deskripsi` text COLLATE utf8mb3_unicode_ci,
   `npp` varchar(20) CHARACTER SET latin1 COLLATE latin1_swedish_ci DEFAULT NULL,
   `bagian_id` int DEFAULT NULL,
-  `periode` enum('bulanan','mingguan','harian') COLLATE utf8mb3_unicode_ci DEFAULT 'bulanan',
+  `periode` enum('bulanan','mingguan','harian','triwulan') CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci DEFAULT 'bulanan',
   `target_tgl` date DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `npp_manager` varchar(20) COLLATE utf8mb3_unicode_ci DEFAULT NULL,
@@ -101,11 +102,12 @@ CREATE TABLE IF NOT EXISTS `master_tugas` (
   KEY `npp` (`npp`),
   CONSTRAINT `master_tugas_ibfk_1` FOREIGN KEY (`bagian_id`) REFERENCES `bagian` (`id_bagian`),
   CONSTRAINT `master_tugas_ibfk_2` FOREIGN KEY (`npp`) REFERENCES `employee` (`npp`)
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=52 DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_unicode_ci;
 
--- Dumping data for table u9621710_worklog.master_tugas: ~1 rows (approximately)
+-- Dumping data for table u9621710_worklog.master_tugas: ~2 rows (approximately)
 REPLACE INTO `master_tugas` (`id`, `judul`, `deskripsi`, `npp`, `bagian_id`, `periode`, `target_tgl`, `created_at`, `npp_manager`) VALUES
-	(50, 'testttt', 'testtt', NULL, 12, 'bulanan', '2026-04-22', '2026-04-22 10:00:59', '20910012');
+	(50, 'testttt', 'testtt', NULL, 12, 'bulanan', '2026-04-22', '2026-04-22 10:00:59', '20910012'),
+	(51, 'Obat Cendo', 'lkajdsa', NULL, 12, 'triwulan', '2026-04-27', '2026-04-27 14:36:50', '20910012');
 
 -- Dumping structure for table u9621710_worklog.master_tugas_detail
 CREATE TABLE IF NOT EXISTS `master_tugas_detail` (
@@ -118,9 +120,9 @@ CREATE TABLE IF NOT EXISTS `master_tugas_detail` (
   KEY `fk_employee_npp` (`npp`),
   CONSTRAINT `fk_employee_npp` FOREIGN KEY (`npp`) REFERENCES `employee` (`npp`) ON DELETE CASCADE,
   CONSTRAINT `fk_master_tugas` FOREIGN KEY (`master_tugas_id`) REFERENCES `master_tugas` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=53 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=61 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Dumping data for table u9621710_worklog.master_tugas_detail: ~4 rows (approximately)
+-- Dumping data for table u9621710_worklog.master_tugas_detail: ~8 rows (approximately)
 REPLACE INTO `master_tugas_detail` (`id`, `master_tugas_id`, `npp`, `created_at`) VALUES
 	(49, 50, '21970019', '2026-04-22 03:28:28'),
 	(50, 50, '23920040', '2026-04-22 03:28:28'),
@@ -142,7 +144,7 @@ CREATE TABLE IF NOT EXISTS `pekerjaan` (
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL,
   `master_tugas_id` int DEFAULT NULL,
-  `periode` varchar(20) DEFAULT NULL,
+  `periode` enum('manual','bulanan','mingguan','harian','triwulan') CHARACTER SET utf8mb3 COLLATE utf8mb3_unicode_ci DEFAULT 'manual',
   PRIMARY KEY (`id`),
   KEY `master_tugas_id` (`master_tugas_id`),
   CONSTRAINT `pekerjaan_ibfk_1` FOREIGN KEY (`master_tugas_id`) REFERENCES `master_tugas` (`id`)

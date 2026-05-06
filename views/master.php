@@ -82,6 +82,8 @@
                             <label class="form-label fw-semibold small">PERIODE</label>
                             <select name="periode" id="fieldPeriode" class="form-select">
                                 <option value="bulanan">BULANAN</option>
+                                <option value="triwulan">TRIWULAN</option>
+                                <option value="mingguan">MINGGUAN</option>
                                 <option value="harian">HARIAN</option>
                             </select>
                         </div>

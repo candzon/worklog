@@ -16,7 +16,7 @@ class MasterModel {
     }
 
     public function getBagians() {
-        $res = $this->db->query("SELECT id_bagian, nama_bagian FROM bagian WHERE nama_bagian IN ('Apoteker', 'TTK') ORDER BY nama_bagian");
+        $res = $this->db->query("SELECT id_bagian, nama_bagian FROM bagian ORDER BY nama_bagian");
         return $res->fetch_all(MYSQLI_ASSOC);
     }
 
@@ -48,17 +48,34 @@ class MasterModel {
     }
 
     public function syncDetails($masterId, $bagianId) {
+        // Hapus detail lama
         $this->db->query("DELETE FROM master_tugas_detail WHERE master_tugas_id = $masterId");
-        $stmtEmp = $this->db->prepare("SELECT npp FROM employee WHERE nama_bagian = ?");
+        
+        // Cari nama_bagian berdasarkan ID
+        $stmtBag = $this->db->prepare("SELECT nama_bagian FROM bagian WHERE id_bagian = ?");
+        $stmtBag->bind_param('i', $bagianId);
+        $stmtBag->execute();
+        $resBag = $stmtBag->get_result();
+        $namaBagian = $resBag->fetch_assoc()['nama_bagian'] ?? null;
+        $stmtBag->close();
+
+        // Ambil semua NPP yang berada di bagian tersebut
+        // Kita cari berdasarkan Nama Bagian (teks) ATAU ID Bagian (angka) di kolom nama_bagian employee
+        $sqlEmp = "SELECT npp FROM employee WHERE nama_bagian = ? OR nama_bagian = ?";
+        $stmtEmp = $this->db->prepare($sqlEmp);
         $sBagId = (string)$bagianId;
-        $stmtEmp->bind_param('s', $sBagId);
+        $stmtEmp->bind_param('ss', $namaBagian, $sBagId);
         $stmtEmp->execute();
         $resEmp = $stmtEmp->get_result();
+        
         $stmtIns = $this->db->prepare('INSERT INTO master_tugas_detail (master_tugas_id, npp) VALUES (?, ?)');
+        $count = 0;
         while ($row = $resEmp->fetch_assoc()) {
             $stmtIns->bind_param('is', $masterId, $row['npp']);
             $stmtIns->execute();
+            $count++;
         }
-        return true;
+        $stmtIns->close();
+        return $count;
     }
 }
