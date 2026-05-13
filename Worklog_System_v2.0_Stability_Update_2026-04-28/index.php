@@ -34,13 +34,7 @@ $model = new DashboardModel($conn);
 $selectedMonth = $_GET['bulan'] ?? date('m');
 $selectedYear = $_GET['tahun'] ?? date('Y');
 $selectedStatus = $_GET['status_tugas'] ?? 'semua';
-
-// Jika Semua Bulan, gunakan null sebagai signal
-if ($selectedMonth === 'semua_bulan') {
-    $currentMonth = null;
-} else {
-    $currentMonth = "$selectedYear-$selectedMonth";
-}
+$currentMonth = "$selectedYear-$selectedMonth";
 
 // Pagination untuk Tabel Progres
 $itemsPerPage = 10;

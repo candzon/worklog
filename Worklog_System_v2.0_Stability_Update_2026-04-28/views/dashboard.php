@@ -16,7 +16,6 @@
                 <div class="col-auto"><label class="fw-bold text-muted small text-uppercase">Filter Periode :</label></div>
                 <div class="col-md-2">
                   <select name="bulan" class="form-select form-select-sm">
-                    <option value="semua_bulan" <?php echo ($selectedMonth == 'semua_bulan') ? 'selected' : ''; ?>>Semua Bulan</option>
                     <?php 
                     $months = [
                       '01'=>'Januari','02'=>'Februari','03'=>'Maret','04'=>'April','05'=>'Mei','06'=>'Juni',
@@ -59,13 +58,7 @@
                   <h3 class="card-title fw-bold">
                     <?php echo ($isManager) ? 'Progres Pekerjaan Pegawai' : 'Progres Pekerjaan Saya'; ?>
                     <span class="badge text-bg-light border ms-2 fw-normal" style="font-size: 0.6em;">
-                      <?php 
-                        if ($selectedMonth === 'semua_bulan') {
-                          echo 'Semua Bulan - ' . $selectedYear;
-                        } else {
-                          echo $months[$selectedMonth] . ' ' . $selectedYear;
-                        }
-                      ?>
+                      <?php echo $months[$selectedMonth] . ' ' . $selectedYear; ?>
                     </span>
                   </h3>
                 </div>
@@ -118,9 +111,8 @@
             </table>
           </div>
         </div>
-        <div class="modal-footer border-top py-3 d-flex justify-content-between align-items-center">
-          <div id="dt_pagination" style="flex: 1; text-align: center;"></div>
-          <button type="button" class="btn btn-light rounded-pill ms-2" data-bs-dismiss="modal">Tutup</button>
+        <div class="modal-footer border-0 pb-3">
+          <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Tutup</button>
         </div>
       </div>
     </div>
@@ -133,162 +125,50 @@ document.addEventListener('DOMContentLoaded', function() {
     const listBody = document.getElementById('dt_list_body');
     const nameEl = document.getElementById('dt_emp_name');
     const statusEl = document.getElementById('dt_status_text');
-    const paginationEl = document.getElementById('dt_pagination');
-    
-    // State untuk track modal saat ini
-    let currentModalData = {
-        npp: null,
-        status: null,
-        bulan: null,
-        tahun: null,
-        page: 1
-    };
 
-    // Render table
-    function renderTable(tasks) {
-        if (!tasks || tasks.length === 0) {
-            listBody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Tidak ada data rincian untuk ditampilkan.</td></tr>';
-            return;
-        }
-        
-        let html = '';
-        tasks.forEach(t => {
-            const dateText = t.tgl_mulai + (t.tgl_selesai && t.tgl_selesai !== t.tgl_mulai ? ` s/d ${t.tgl_selesai}` : '');
-            
-            let actionBtn = '<span class="text-muted small">Tidak ada lampiran</span>';
-            if (t.lampiran) {
-              actionBtn = `<a href="uploads/${t.lampiran}" target="_blank" class="btn btn-xs btn-outline-info rounded-pill px-3"><i class="bi bi-file-earmark-text me-1"></i> Lihat Lampiran</a>`;
-            }
-
-            html += `<tr>
-                <td class="ps-4">
-                  <div class="fw-bold">${t.judul}</div>
-                  <div class="small text-muted text-wrap" style="max-width:450px;">${t.deskripsi || '-'}</div>
-                </td>
-                <td><span class="badge text-bg-light border text-uppercase">${t.periode || 'Manual'}</span></td>
-                <td><small class="text-muted">${dateText}</small></td>
-                <td><span class="badge ${currentModalData.status === 'done' ? 'text-bg-success' : 'text-bg-primary'}">${t.status_label}</span></td>
-                <td class="text-center">${actionBtn}</td>
-            </tr>`;
-        });
-        listBody.innerHTML = html;
-    }
-    
-    // Render pagination
-    function renderPagination(pagination) {
-        if (!pagination || pagination.totalPages <= 1) {
-            paginationEl.innerHTML = '';
-            return;
-        }
-        
-        let html = '<nav aria-label="Task pagination" class="d-flex justify-content-center"><ul class="pagination pagination-sm mb-0">';
-        
-        // Previous
-        if (pagination.page > 1) {
-            html += `<li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadTaskPage(${pagination.page - 1})" title="Halaman sebelumnya">«</a></li>`;
-        } else {
-            html += '<li class="page-item disabled"><a class="page-link" href="javascript:void(0)" title="Halaman sebelumnya">«</a></li>';
-        }
-        
-        // Page numbers
-        const start = Math.max(1, pagination.page - 2);
-        const end = Math.min(pagination.totalPages, start + 4);
-        for (let i = start; i <= end; i++) {
-            if (i === pagination.page) {
-                html += `<li class="page-item active"><a class="page-link" href="javascript:void(0)">${i}</a></li>`;
-            } else {
-                html += `<li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadTaskPage(${i})">${i}</a></li>`;
-            }
-        }
-        
-        // Next
-        if (pagination.page < pagination.totalPages) {
-            html += `<li class="page-item"><a class="page-link" href="javascript:void(0)" onclick="loadTaskPage(${pagination.page + 1})" title="Halaman berikutnya">»</a></li>`;
-        } else {
-            html += '<li class="page-item disabled"><a class="page-link" href="javascript:void(0)" title="Halaman berikutnya">»</a></li>';
-        }
-        
-        html += '</ul></nav>';
-        paginationEl.innerHTML = html;
-    }
-    
-    // Load specific page
-    window.loadTaskPage = function(page) {
-        currentModalData.page = page;
-        listBody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><br><small class="text-muted mt-2 d-block">Memuat data...</small></td></tr>';
-        
-        const url = `api/get_ongoing_tasks.php?npp=${currentModalData.npp}&status=${currentModalData.status}&bulan=${currentModalData.bulan}&tahun=${currentModalData.tahun}&page=${page}`;
-        
-        console.log('Loading tasks:', { url, data: currentModalData, page });
-        
-        fetch(url)
-            .then(r => {
-                console.log('Response status:', r.status, 'headers:', r.headers);
-                if (!r.ok) {
-                    throw new Error(`HTTP ${r.status}: ${r.statusText}`);
-                }
-                return r.text();
-            })
-            .then(text => {
-                console.log('Raw response text:', text);
-                try {
-                    return JSON.parse(text);
-                } catch(e) {
-                    console.error('JSON parse failed:', e);
-                    throw new Error('Invalid JSON response: ' + e.message);
-                }
-            })
-            .then(response => {
-                console.log('Parsed response:', response);
-                if (response && response.data !== undefined && response.pagination !== undefined) {
-                    renderTable(response.data);
-                    renderPagination(response.pagination);
-                } else {
-                    console.error('Invalid response structure. Expected data and pagination properties');
-                    listBody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Tidak ada data rincian untuk ditampilkan.</td></tr>';
-                }
-            })
-            .catch(err => {
-                console.error('Full error object:', err);
-                console.error('Error message:', err.message);
-                console.error('Error stack:', err.stack);
-                const errorMsg = err.message || 'Kesalahan tidak diketahui';
-                listBody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-danger"><small><strong>Kesalahan:</strong><br>' + escapeHtml(errorMsg) + '</small></td></tr>';
-            });
-    };
-    
-    // Helper untuk escape HTML
-    function escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, m => map[m]);
-    }
-
-    // Button click handler
     document.querySelectorAll('.btn-detail-task').forEach(btn => {
         btn.addEventListener('click', function() {
             const npp = this.dataset.npp;
             const status = this.dataset.status;
             const empName = this.dataset.name;
             
-            // Update state
-            currentModalData.npp = npp;
-            currentModalData.status = status;
-            currentModalData.bulan = '<?php echo $selectedMonth; ?>';
-            currentModalData.tahun = '<?php echo $selectedYear; ?>';
-            currentModalData.page = 1;
-            
             nameEl.textContent = empName;
             statusEl.textContent = (status === 'open' ? 'Tugas Belum Selesai' : 'Tugas Selesai');
             listBody.innerHTML = '<tr><td colspan="5" class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><br><small class="text-muted mt-2 d-block">Memuat data rincian...</small></td></tr>';
             modal.show();
 
-            loadTaskPage(1);
+            const bulan = '<?php echo $selectedMonth; ?>';
+            const tahun = '<?php echo $selectedYear; ?>';
+
+            fetch(`api/get_ongoing_tasks.php?npp=${npp}&status=${status}&bulan=${bulan}&tahun=${tahun}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        listBody.innerHTML = '<tr><td colspan="5" class="text-center py-5 text-muted">Tidak ada data rincian untuk ditampilkan.</td></tr>';
+                        return;
+                    }
+                    let html = '';
+                    data.forEach(t => {
+                        const dateText = t.tgl_mulai + (t.tgl_selesai && t.tgl_selesai !== t.tgl_mulai ? ` s/d ${t.tgl_selesai}` : '');
+                        
+                        let actionBtn = '<span class="text-muted small">Tidak ada lampiran</span>';
+                        if (t.lampiran) {
+                          actionBtn = `<a href="uploads/${t.lampiran}" target="_blank" class="btn btn-xs btn-outline-info rounded-pill px-3"><i class="bi bi-file-earmark-text me-1"></i> Lihat Lampiran</a>`;
+                        }
+
+                        html += `<tr>
+                            <td class="ps-4">
+                              <div class="fw-bold">${t.judul}</div>
+                              <div class="small text-muted text-wrap" style="max-width:450px;">${t.deskripsi || '-'}</div>
+                            </td>
+                            <td><span class="badge text-bg-light border text-uppercase">${t.periode || 'Manual'}</span></td>
+                            <td><small class="text-muted">${dateText}</small></td>
+                            <td><span class="badge ${status === 'done' ? 'text-bg-success' : 'text-bg-primary'}">${t.status_label}</span></td>
+                            <td class="text-center">${actionBtn}</td>
+                        </tr>`;
+                    });
+                    listBody.innerHTML = html;
+                });
         });
     });
 });

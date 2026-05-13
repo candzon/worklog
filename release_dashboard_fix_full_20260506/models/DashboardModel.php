@@ -40,8 +40,8 @@ class DashboardModel {
                             WHERE mtdx.master_tugas_id = mt.id
                         )
                         AND (
-                            TRIM(e.nama_bagian) COLLATE utf8mb4_unicode_ci = CAST(mt.bagian_id AS CHAR) COLLATE utf8mb4_unicode_ci
-                            OR TRIM(e.nama_bagian) COLLATE utf8mb4_unicode_ci = TRIM(b.nama_bagian) COLLATE utf8mb4_unicode_ci
+                            e.nama_bagian = CAST(mt.bagian_id AS CHAR)
+                            OR e.nama_bagian = b.nama_bagian
                         )
                    )";
 

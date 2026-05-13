@@ -1,0 +1,53 @@
+PENJELASAN LOGIKA SISTEM MASTER PEKERJAAN - WORKLOG APP (UPDATED)
+==============================================================
+
+1. KONSEP DASAR (TEMPLAT VS REALISASI)
+--------------------------------------
+Sistem memisahkan pekerjaan menjadi dua entitas:
+- Master Pekerjaan: Adalah "Templat" atau rencana tugas rutin. Data ini hanya dibuat satu kali oleh Manager.
+- Pekerjaan (Realisasi): Adalah bukti bahwa tugas tersebut benar-benar dilakukan. Data ini tercipta di database tabel 'pekerjaan' hanya SETELAH pegawai menekan tombol 'Selesai'.
+
+2. LOGIKA PERIODE TUGAS RUTIN (MASTER)
+--------------------------------------
+Sistem secara cerdas memunculkan tugas di kalender dan dashboard berdasarkan frekuensi yang dipilih:
+
+A. HARIAN (Daily)
+   - Logika: Tugas muncul setiap hari dalam kalender sejak tanggal tugas master dibuat.
+   - Status: Muncul sebagai 'Open' setiap hari. Jika tidak diselesaikan pada hari tersebut, akan tetap muncul sebagai 'Open' di riwayat laporan hari itu.
+
+B. MINGGUAN (Weekly)
+   - Logika: Tugas muncul satu kali setiap minggu pada hari yang sama dengan 'Tanggal Target' (Contoh: Setiap hari Senin).
+
+C. BULANAN (Monthly)
+   - Logika: Tugas muncul satu kali setiap bulan sesuai 'Tanggal Target'. Sistem otomatis menyesuaikan jika suatu bulan hanya memiliki 28/30 hari.
+
+D. TRIWULAN (Quarterly)
+   - Logika: Tugas muncul setiap 3 bulan sekali mengikuti siklus bisnis (Januari, April, Juli, Oktober).
+
+3. AKURASI PEMETAAN PEGAWAI (MAPPING NPP)
+-----------------------------------------
+Berbeda dengan sistem biasa, perhitungan progres di aplikasi ini sangat akurat karena:
+- Mapping Per Individu: Tugas master dikaitkan ke tiap pegawai melalui tabel 'master_tugas_detail' berdasarkan NPP.
+- Progress Riil: Jika satu tugas master ditujukan untuk 5 orang, maka sistem akan menghitung progress masing-masing orang secara independen. Jika A sudah selesai tapi B belum, maka dashboard akan menampilkan data yang berbeda sesuai pencapaian masing-masing.
+
+4. LOGIKA FILTER & KEAMANAN RIWAYAT (CREATED AT)
+------------------------------------------------
+Sistem memiliki logika cerdas untuk mencegah beban tugas fiktif di masa lalu:
+- Validasi Tanggal Dibuat: Tugas rutin (terutama Harian/Mingguan) HANYA akan muncul pada tanggal tugas master tersebut dibuat atau setelahnya. 
+- Contoh: Jika tugas master Harian baru dibuat tanggal 27 April, maka sistem TIDAK AKAN menagih tugas dari tanggal 1-26 April. Hal ini memastikan persentase progres pegawai tetap adil dan logis.
+- Akurasi Historis: Jika Manager melihat laporan tahun 2024, sementara tugas baru dibuat tahun 2026, maka angka total tugas akan otomatis 0 (Akurat sesuai sejarah data).
+
+5. CARA KERJA DASHBOARD & REALISASI
+-----------------------------------
+- Dashboard menghitung secara "Virtual": (Tugas Selesai) / (Tugas Selesai + Tugas Open Virtual).
+- Saat pegawai klik 'Selesai', sistem melakukan INSERT ke tabel 'pekerjaan' dengan mencatat:
+  1. ID Master sebagai referensi.
+  2. Tanggal Kejadian (kapan seharusnya tugas itu dilakukan).
+  3. NPP Pegawai yang mengerjakan.
+  4. Lampiran Bukti Kerja.
+
+6. MANFAAT UTAMA
+----------------
+- Fairness (Keadilan): Pegawai tidak dibebani tugas rutin yang belum ada saat mereka belum bergabung atau saat tugas belum dibuat.
+- High Accuracy: Progress 100% berarti semua tugas manual dan semua jadwal rutin di periode tersebut benar-benar telah memiliki bukti lampiran.
+- No Database Bloat: Tabel database tidak penuh dengan jadwal kosong, karena jadwal rutin hanya dibuat barisnya saat sudah dikerjakan.

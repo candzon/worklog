@@ -10,7 +10,7 @@ require_once __DIR__ . '/../models/MasterModel.php';
 ensure_session_started();
 
 $model = new MasterModel($conn);
-$perPage = 20;
+$perPage = 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $perPage;
 

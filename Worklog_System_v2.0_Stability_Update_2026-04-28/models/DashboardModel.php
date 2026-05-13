@@ -18,36 +18,6 @@ class DashboardModel {
         return $res;
     }
 
-    /**
-     * Ambil master tugas untuk pegawai:
-     * 1) yang sudah termapping di master_tugas_detail, atau
-     * 2) fallback untuk master tugas tanpa detail mapping tetapi bagian-nya sama.
-     */
-    private function getMasterTasksForEmployee($npp) {
-        $sql = "SELECT DISTINCT mt.id, mt.periode, mt.target_tgl, mt.created_at
-                FROM master_tugas mt
-                LEFT JOIN master_tugas_detail mtd_self
-                    ON mtd_self.master_tugas_id = mt.id AND mtd_self.npp = '$npp'
-                LEFT JOIN employee e
-                    ON e.npp = '$npp'
-                LEFT JOIN bagian b
-                    ON b.id_bagian = mt.bagian_id
-                WHERE mtd_self.id IS NOT NULL
-                   OR (
-                        NOT EXISTS (
-                            SELECT 1
-                            FROM master_tugas_detail mtdx
-                            WHERE mtdx.master_tugas_id = mt.id
-                        )
-                        AND (
-                            TRIM(e.nama_bagian) COLLATE utf8mb4_unicode_ci = CAST(mt.bagian_id AS CHAR) COLLATE utf8mb4_unicode_ci
-                            OR TRIM(e.nama_bagian) COLLATE utf8mb4_unicode_ci = TRIM(b.nama_bagian) COLLATE utf8mb4_unicode_ci
-                        )
-                   )";
-
-        return $this->querySafe($sql);
-    }
-
     public function getCounts($isManager, $currentNpp, $currentMonth) {
         // Task Done
         $sqlDone = "SELECT COUNT(*) AS cnt FROM pekerjaan WHERE LOWER(TRIM(status)) IN ('done','selesai','completed')";
@@ -73,11 +43,6 @@ class DashboardModel {
     }
 
     public function getUserProgress($isManager, $currentNpp, $currentMonth, $limit, $offset, $statusFilter = 'semua') {
-        // Jika currentMonth adalah null, gunakan method untuk semua bulan
-        if ($currentMonth === null) {
-            return $this->getUserProgressAllMonths($isManager, $currentNpp, $limit, $offset, $statusFilter);
-        }
-        
         $sqlBase = "SELECT npp, nama_emp FROM employee WHERE role_id = 3";
         if (!$isManager) { $sqlBase .= " AND npp = '$currentNpp'"; }
         
@@ -102,7 +67,7 @@ class DashboardModel {
 
             // 3. HITUNG OPEN MASTER (VIRTUAL)
             $openM = 0;
-            $resM = $this->getMasterTasksForEmployee($npp);
+            $resM = $this->querySafe("SELECT mt.id, mt.periode, mt.target_tgl, mt.created_at FROM master_tugas_detail mtd JOIN master_tugas mt ON mt.id = mtd.master_tugas_id WHERE mtd.npp = '$npp'");
             if ($resM) {
                 while ($mt = $resM->fetch_assoc()) {
                     $masterId = $mt['id'];
@@ -132,12 +97,12 @@ class DashboardModel {
                             $cursor->modify('+1 day');
                         } elseif ($periode === 'bulanan') {
                             $useDay = min($targetDay, (int)$cursor->format('t'));
-                            $occDate = sprintf('%s-%02d', $cursor->format('Y-m'), $useDay);
+                            $occDate = $cursor->format("Y-m-$useDay");
                             $cursor->modify('first day of next month');
                         } elseif ($periode === 'triwulan') {
                             if (((int)$cursor->format('n') - 1) % 3 === 0) {
                                 $useDay = min($targetDay, (int)$cursor->format('t'));
-                                $occDate = sprintf('%s-%02d', $cursor->format('Y-m'), $useDay);
+                                $occDate = $cursor->format("Y-m-$useDay");
                             }
                             $cursor->modify('first day of next month');
                         } else { $cursor->modify('+1 day'); }
@@ -166,95 +131,6 @@ class DashboardModel {
                     'npp' => $npp, 'nama_emp' => $emp['nama_emp'], 'total' => $total,
                     'selesai' => $done, 'open' => $openTotal,
                     'persen' => ($total > 0 ? round(($done / $total) * 100) : 0)
-                ];
-            }
-        }
-
-        $this->lastFilteredCount = count($results);
-        return array_slice($results, $offset, $limit);
-    }
-
-    // METHOD UNTUK SEMUA BULAN
-    private function getUserProgressAllMonths($isManager, $currentNpp, $limit, $offset, $statusFilter = 'semua') {
-        $sqlBase = "SELECT npp, nama_emp FROM employee WHERE role_id = 3";
-        if (!$isManager) { $sqlBase .= " AND npp = '$currentNpp'"; }
-        
-        $resProg = $this->querySafe("$sqlBase ORDER BY nama_emp ASC");
-        if (!$resProg) return [];
-
-        $results = [];
-        $now = new DateTime();
-        
-        while ($emp = $resProg->fetch_assoc()) {
-            $npp = $emp['npp'];
-            
-            // 1. HITUNG SEMUA TUGAS SELESAI (Manual)
-            $resD = $this->querySafe("SELECT COUNT(*) as cnt FROM pekerjaan WHERE assigned_to_npp = '$npp' AND LOWER(TRIM(status)) IN ('done','selesai','completed')");
-            $doneManual = $resD ? (int)($resD->fetch_assoc()['cnt'] ?? 0) : 0;
-
-            // 2. HITUNG SEMUA TUGAS OPEN MANUAL
-            $resP = $this->querySafe("SELECT COUNT(*) as cnt FROM pekerjaan WHERE assigned_to_npp = '$npp' AND master_tugas_id IS NULL AND NOT (LOWER(TRIM(status)) IN ('done','selesai','completed'))");
-            $openManual = $resP ? (int)($resP->fetch_assoc()['cnt'] ?? 0) : 0;
-
-            // 3. HITUNG VIRTUAL MASTER TASKS DARI SEMUA WAKTU
-            $openVirtualMaster = 0;
-            $resM = $this->getMasterTasksForEmployee($npp);
-            if ($resM) {
-                while ($mt = $resM->fetch_assoc()) {
-                    $masterId = $mt['id'];
-                    $periode = strtolower($mt['periode']);
-                    $targetDay = !empty($mt['target_tgl']) ? (int)date('j', strtotime($mt['target_tgl'])) : 1;
-                    $targetWDay = !empty($mt['target_tgl']) ? (int)date('w', strtotime($mt['target_tgl'])) : 1;
-                    
-                    $createdAt = new DateTime($mt['created_at']);
-                    $cursor = clone $createdAt;
-                    $cursor->setTime(0, 0, 0);
-                    
-                    // Loop dari created_at sampai hari ini
-                    while ($cursor <= $now) {
-                        $occDate = null;
-                        if ($periode === 'harian') {
-                            $occDate = $cursor->format('Y-m-d');
-                            $cursor->modify('+1 day');
-                        } elseif ($periode === 'mingguan') {
-                            if ((int)$cursor->format('w') === $targetWDay) { $occDate = $cursor->format('Y-m-d'); }
-                            $cursor->modify('+1 day');
-                        } elseif ($periode === 'bulanan') {
-                            $useDay = min($targetDay, (int)$cursor->format('t'));
-                            $occDate = sprintf('%s-%02d', $cursor->format('Y-m'), $useDay);
-                            $cursor->modify('first day of next month');
-                        } elseif ($periode === 'triwulan') {
-                            if (((int)$cursor->format('n') - 1) % 3 === 0) {
-                                $useDay = min($targetDay, (int)$cursor->format('t'));
-                                $occDate = sprintf('%s-%02d', $cursor->format('Y-m'), $useDay);
-                            }
-                            $cursor->modify('first day of next month');
-                        } else { $cursor->modify('+1 day'); }
-
-                        if ($occDate && $occDate <= $now->format('Y-m-d')) {
-                            // Cek apakah sudah ada realisasi 'done'
-                            $resCheck = $this->querySafe("SELECT 1 FROM pekerjaan WHERE master_tugas_id = '$masterId' AND assigned_to_npp = '$npp' AND tgl_mulai = '$occDate' AND LOWER(TRIM(status)) IN ('done','selesai','completed')");
-                            if (!$resCheck || $resCheck->num_rows == 0) {
-                                $openVirtualMaster++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            $openTotal = $openManual + $openVirtualMaster;
-            $total = $doneManual + $openTotal;
-            
-            $include = true;
-            if ($statusFilter === 'open' && $openTotal == 0) $include = false;
-            elseif ($statusFilter === 'done' && $doneManual == 0) $include = false;
-            if ($statusFilter === 'semua') $include = true;
-
-            if ($include) {
-                $results[] = [
-                    'npp' => $npp, 'nama_emp' => $emp['nama_emp'], 'total' => $total,
-                    'selesai' => $doneManual, 'open' => $openTotal,
-                    'persen' => ($total > 0 ? round(($doneManual / $total) * 100) : 0)
                 ];
             }
         }

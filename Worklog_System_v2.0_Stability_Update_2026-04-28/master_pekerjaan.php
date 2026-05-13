@@ -20,7 +20,7 @@ if (!$isManager) {
 
 // 2. Fetch Data
 $model = new MasterModel($conn);
-$perPage = 20;
+$perPage = 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $totalRows = $model->getCount();
 $totalPages = ceil(max(1, $totalRows) / $perPage);
