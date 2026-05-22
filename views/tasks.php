@@ -53,6 +53,30 @@
     </div>
 </div>
 
+<!-- Document Viewer Modal -->
+<div class="modal fade" id="docViewerModal" tabindex="-1" aria-hidden="true" style="z-index: 2000;">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content border-0" style="border-radius: 0;">
+            <div class="modal-header bg-dark text-white border-0 py-2">
+                <h6 class="modal-title small fw-bold" id="docViewerTitle">Pratinjau Dokumen</h6>
+                <div class="d-flex gap-2">
+                    <a href="#" id="btnDownloadActual" class="btn btn-sm btn-outline-light rounded-pill px-3" target="_blank">
+                        <i class="bi bi-download me-1"></i> Download
+                    </a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+            </div>
+            <div class="modal-body p-0 bg-secondary d-flex justify-content-center align-items-center">
+                <div id="docLoader" class="text-white text-center position-absolute">
+                    <div class="spinner-border" role="status"></div>
+                    <div class="mt-2 small">Memuat Dokumen...</div>
+                </div>
+                <iframe id="docViewerIframe" src="" width="100%" height="100%" style="border:none; background: #fff;" onload="document.getElementById('docLoader').classList.add('d-none')"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Buat Pekerjaan -->
 <div class="modal fade" id="pekerjaanModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -133,7 +157,7 @@
                 <div id="pj_detail_upload_row" class="mt-3 d-none">
                     <div class="card bg-light border-0">
                         <div class="card-body">
-                            <label class="form-label text-dark">UNGGAH BUKTI PENYELESAIAN (MAKS 2MB)</label>
+                            <label class="form-label text-dark">UNGGAH BUKTI PENYELESAIAN (Semua Tipe File, Maks 5MB)</label>
                             <input type="file" id="pj_detail_file" class="form-control bg-white">
                             <div id="pj_detail_file_view" class="mt-2 d-none">
                                 <a id="pj_detail_file_link" href="#" target="_blank" class="btn btn-sm btn-outline-info w-100 mt-2">
@@ -159,6 +183,43 @@ document.addEventListener('DOMContentLoaded', function () {
     const modal = new bootstrap.Modal(document.getElementById('pekerjaanModal'));
     const detailModal = new bootstrap.Modal(document.getElementById('pekerjaanDetailModal'));
 
+    // Helper untuk escape JS string
+    function escapeJs(str) {
+        return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
+    // Fungsi Preview Dokumen (Universal)
+    window.viewDocument = function(fileName, title) {
+        const viewerModal = new bootstrap.Modal(document.getElementById('docViewerModal'));
+        const iframe = document.getElementById('docViewerIframe');
+        const titleEl = document.getElementById('docViewerTitle');
+        const downloadBtn = document.getElementById('btnDownloadActual');
+        const loader = document.getElementById('docLoader');
+
+        const fileUrl = `<?php echo site_url('uploads/'); ?>${fileName}`;
+        const encodedUrl = encodeURIComponent(fileUrl);
+        const ext = fileName.split('.').pop().toLowerCase();
+        
+        titleEl.textContent = `Pratinjau: ${title}`;
+        downloadBtn.href = fileUrl;
+        loader.classList.remove('d-none');
+        iframe.src = ''; // Reset
+
+        // Logika Router Viewer
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+            iframe.src = fileUrl; // Gambar langsung
+        } else if (ext === 'pdf') {
+            iframe.src = fileUrl; // Browser modern dukung PDF
+        } else if (['xlsx', 'xls', 'doc', 'docx', 'ppt', 'pptx'].includes(ext)) {
+            // Gunakan Google Docs Viewer untuk Office Files
+            iframe.src = `https://docs.google.com/viewer?url=${encodedUrl}&embedded=true`;
+        } else {
+            iframe.src = fileUrl;
+        }
+
+        viewerModal.show();
+    };
+
     const urlParams = new URLSearchParams(window.location.search);
     const defaultView = urlParams.has('filter_npp') ? 'listMonth' : (window.innerWidth < 576 ? 'listWeek' : 'dayGridMonth');
 
@@ -176,6 +237,11 @@ document.addEventListener('DOMContentLoaded', function () {
         eventClick: (info) => showDetail(info.event),
         eventContent: (arg) => {
             let props = arg.event.extendedProps;
+            let rawTitle = arg.event.title || '';
+            
+            // Hapus kategori dari title (misal: "[HARIAN] Tugas" menjadi "Tugas")
+            let cleanTitle = rawTitle.replace(/^\[.*?\]\s*/, '');
+            
             let statusVal = (props.status || '').toLowerCase();
             let isDone = ['done','selesai','completed'].includes(statusVal);
             
@@ -184,10 +250,7 @@ document.addEventListener('DOMContentLoaded', function () {
             
             return {
                 html: `<div class="fc-custom-event ${!arg.isStart ? 'is-continuation' : ''}" style="background: ${bgColor}; color: #fff;">
-                    <div class="fc-ce-header">
-                        <div class="fc-ce-title">${arg.event.title}</div>
-                        <span class="fc-ce-badge">${isDone ? 'DONE' : 'OPEN'}</span>
-                    </div>
+                    <div class="fc-ce-title">${cleanTitle}</div>
                 </div>`
             };
         }
@@ -196,7 +259,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function showDetail(ev) {
         let p = ev.extendedProps;
-        document.getElementById('pj_detail_title').textContent = ev.title;
+        let rawTitle = ev.title || '';
+        let cleanTitle = rawTitle.replace(/^\[.*?\]\s*/, '');
+        
+        document.getElementById('pj_detail_title').textContent = cleanTitle;
         document.getElementById('pj_detail_assigned').textContent = p.assigned_name || '-';
         document.getElementById('pj_detail_reporter').textContent = p.reporter_name || 'Manager';
         document.getElementById('pj_detail_desc').textContent = p.description || '-';
@@ -214,12 +280,18 @@ document.addEventListener('DOMContentLoaded', function () {
         uploadRow.classList.remove('d-none');
         document.getElementById('pj_detail_file').classList.toggle('d-none', isDone);
         document.getElementById('pj_detail_file_view').classList.toggle('d-none', !p.lampiran);
-        if(p.lampiran) document.getElementById('pj_detail_file_link').href = 'uploads/' + p.lampiran;
+        
+        if(p.lampiran) {
+            document.getElementById('pj_detail_file_link').onclick = (e) => {
+                e.preventDefault();
+                viewDocument(p.lampiran, cleanTitle);
+            };
+        }
 
         doneBtn.onclick = () => {
             let file = document.getElementById('pj_detail_file').files[0];
             if(!file) { Swal.fire('Perhatian', 'Wajib mengunggah bukti penyelesaian!', 'warning'); return; }
-            if(file.size > 2*1024*1024) { Swal.fire('Error', 'Ukuran file maksimal 2MB!', 'error'); return; }
+            if(file.size > 5*1024*1024) { Swal.fire('Error', 'Ukuran file maksimal 5MB!', 'error'); return; }
             
             let fd = new FormData();
             if(p.is_master) { fd.append('master_tugas_id', p.master_tugas_id); fd.append('tgl_mulai', p.tgl_mulai); fd.append('token', p.occ_token); }

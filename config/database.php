@@ -1,4 +1,8 @@
 <?php
+// Mencegah kebocoran error PHP yang merusak format JSON (Production Mode)
+error_reporting(0);
+ini_set('display_errors', 0);
+
 $config = [
     'host' => '127.0.0.1',
     'dbname' => 'u9621710_worklog',

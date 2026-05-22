@@ -28,7 +28,7 @@ class MasterModel {
     }
 
     public function update($id, $data) {
-        $stmt = $this->db->prepare("UPDATE master_tugas SET judul = ?, deskripsi = ?, periode = ?, target_tgl = ?, bagian_id = ?, npp = NULL WHERE id = ?");
+        $stmt = $this->db->prepare("UPDATE master_tugas SET judul = ?, deskripsi = ?, periode = ?, target_tgl = ?, bagian_id = ? WHERE id = ?");
         $stmt->bind_param('ssssii', $data['judul'], $data['deskripsi'], $data['periode'], $data['target_tgl'], $data['bagian_id'], $id);
         return $stmt->execute();
     }
@@ -60,11 +60,9 @@ class MasterModel {
         $stmtBag->close();
 
         // Ambil semua NPP yang berada di bagian tersebut
-        // Kita cari berdasarkan Nama Bagian (teks) ATAU ID Bagian (angka) di kolom nama_bagian employee
-        $sqlEmp = "SELECT npp FROM employee WHERE nama_bagian = ? OR nama_bagian = ?";
+        $sqlEmp = "SELECT npp FROM employee WHERE bagian_id = ?";
         $stmtEmp = $this->db->prepare($sqlEmp);
-        $sBagId = (string)$bagianId;
-        $stmtEmp->bind_param('ss', $namaBagian, $sBagId);
+        $stmtEmp->bind_param('i', $bagianId);
         $stmtEmp->execute();
         $resEmp = $stmtEmp->get_result();
         
@@ -76,6 +74,7 @@ class MasterModel {
             $count++;
         }
         $stmtIns->close();
+        $stmtEmp->close();
         return $count;
     }
 }

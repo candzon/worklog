@@ -22,6 +22,7 @@ $resR = $stmtR->get_result()->fetch_assoc();
 if ($resR && ($resR['role_id'] == 1 || $resR['role_id'] == 2)) {
     $isManager = true;
 }
+$stmtR->close();
 
 if (!$isManager) {
     http_response_code(403);
@@ -47,7 +48,7 @@ try {
     } else {
         throw new Exception("Gagal menyimpan ke database.");
     }
-} catch (Exception $e) {
+} catch (Throwable $e) {
     http_response_code(500);
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }

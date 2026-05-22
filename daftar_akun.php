@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('acc_nama').value = data.nama_emp;
             document.getElementById('acc_telp').value = data.telp;
             document.getElementById('acc_jk').value = data.jenis_kelamin;
-            document.getElementById('acc_dept').value = data.nama_bagian; // Kolom di DB adalah nama_bagian tapi isinya ID
+            document.getElementById('acc_dept').value = data.bagian_id; // Menggunakan bagian_id agar sinkron dengan dropdown
             document.getElementById('acc_role').value = data.role_id;
             alertEl.classList.add('d-none');
             modal.show();

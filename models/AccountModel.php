@@ -5,10 +5,11 @@ class AccountModel {
 
     public function getAll($limit, $offset) {
         // Ambil data dengan JOIN ke tabel bagian untuk mendapatkan NAMA bagiannya
+        // Update: Menggunakan bagian_id sesuai hasil migrasi
         $sql = "SELECT e.*, r.name as role_name, b.nama_bagian as dept_name 
                 FROM employee e 
                 LEFT JOIN roles r ON e.role_id = r.id 
-                LEFT JOIN bagian b ON b.id_bagian = e.nama_bagian
+                LEFT JOIN bagian b ON b.id_bagian = e.bagian_id
                 ORDER BY e.nama_emp ASC LIMIT ? OFFSET ?";
         
         $stmt = $this->db->prepare($sql);
@@ -28,11 +29,11 @@ class AccountModel {
     }
 
     public function getRoles() { 
-        return $this->db->query("SELECT id, name FROM roles WHERE name = 'user'")->fetch_all(MYSQLI_ASSOC); 
+        return $this->db->query("SELECT id, name FROM roles")->fetch_all(MYSQLI_ASSOC); 
     }
     
     public function getDepts() { 
-        return $this->db->query("SELECT id_bagian, nama_bagian FROM bagian WHERE nama_bagian IN ('Apoteker', 'TTK') ORDER BY nama_bagian")->fetch_all(MYSQLI_ASSOC); 
+        return $this->db->query("SELECT id_bagian, nama_bagian FROM bagian ORDER BY nama_bagian")->fetch_all(MYSQLI_ASSOC); 
     }
 
     public function upsert($data) {
@@ -40,12 +41,12 @@ class AccountModel {
         $check = $this->db->query("SELECT npp FROM employee WHERE npp = '" . $this->db->real_escape_string($npp) . "'");
         
         if ($check && $check->num_rows > 0) {
-            // Update: sesuaikan kolom dengan struktur asli (nama_bagian berisi ID)
-            $stmt = $this->db->prepare("UPDATE employee SET nama_emp=?, jenis_kelamin=?, telp=?, nama_bagian=?, role_id=? WHERE npp=?");
+            // Update: sesuaikan kolom dengan struktur asli (bagian_id hasil migrasi)
+            $stmt = $this->db->prepare("UPDATE employee SET nama_emp=?, jenis_kelamin=?, telp=?, bagian_id=?, role_id=? WHERE npp=?");
             $stmt->bind_param('ssssis', $data['nama_emp'], $data['jenis_kelamin'], $data['telp'], $data['bagian_id'], $data['role_id'], $npp);
         } else {
             // Insert
-            $stmt = $this->db->prepare("INSERT INTO employee (npp, nama_emp, jenis_kelamin, telp, nama_bagian, role_id, password) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $this->db->prepare("INSERT INTO employee (npp, nama_emp, jenis_kelamin, telp, bagian_id, role_id, password) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $pass = $npp; // Default pass = NPP
             $stmt->bind_param('sssssis', $npp, $data['nama_emp'], $data['jenis_kelamin'], $data['telp'], $data['bagian_id'], $data['role_id'], $pass);
         }

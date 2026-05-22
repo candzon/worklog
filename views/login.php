@@ -1,6 +1,11 @@
 <!-- views/login.php -->
+<!-- <?php
+require_once 'includes/maintenance.php';
+
+?> -->
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,13 +13,14 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap"
+        rel="stylesheet">
+
     <!-- CSS -->
     <link rel="stylesheet" href="<?php echo asset_url('css/adminlte.min.css'); ?>">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+
     <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
@@ -24,7 +30,7 @@
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background: #f8fafc;
-            background-image: 
+            background-image:
                 radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.1) 0px, transparent 50%),
                 radial-gradient(at 100% 0%, rgba(30, 58, 138, 0.1) 0px, transparent 50%);
             height: 100vh;
@@ -117,7 +123,7 @@
             box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
         }
 
-        .input-group-modern .form-control:focus + i {
+        .input-group-modern .form-control:focus+i {
             color: #3b82f6;
         }
 
@@ -156,11 +162,22 @@
             z-index: 1;
         }
 
-        .circle-1 { width: 300px; height: 300px; top: -100px; left: -100px; }
-        .circle-2 { width: 400px; height: 400px; bottom: -150px; right: -100px; }
+        .circle-1 {
+            width: 300px;
+            height: 300px;
+            top: -100px;
+            left: -100px;
+        }
 
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            bottom: -150px;
+            right: -100px;
+        }
     </style>
 </head>
+
 <body>
     <div class="circle circle-1"></div>
     <div class="circle circle-2"></div>
@@ -177,7 +194,8 @@
                 <div class="form-group mb-3">
                     <label class="form-label">Nomor Pegawai</label>
                     <div class="input-group-modern">
-                        <input type="text" name="npp" class="form-control" placeholder="Masukkan NPP Anda" required autocomplete="username">
+                        <input type="text" name="npp" class="form-control" placeholder="Masukkan NPP Anda" required
+                            autocomplete="username">
                         <i class="bi bi-person-badge"></i>
                     </div>
                 </div>
@@ -185,7 +203,8 @@
                 <div class="form-group mb-4">
                     <label class="form-label">Kata Sandi</label>
                     <div class="input-group-modern">
-                        <input type="password" name="password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+                        <input type="password" name="password" class="form-control" placeholder="••••••••" required
+                            autocomplete="current-password">
                         <i class="bi bi-lock"></i>
                     </div>
                 </div>
@@ -198,49 +217,50 @@
     </div>
 
     <script>
-    document.getElementById('loginForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnLogin');
-        const originalText = btn.innerHTML;
-        
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Autentikasi...';
+        document.getElementById('loginForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            const originalText = btn.innerHTML;
 
-        fetch('api/auth.php', {
-            method: 'POST',
-            body: new FormData(this)
-        })
-        .then(async r => {
-            const res = await r.json();
-            if(!r.ok) throw new Error(res.message || 'Login Gagal');
-            return res;
-        })
-        .then(res => {
-            Swal.fire({ 
-                icon: 'success', 
-                title: 'Berhasil', 
-                text: 'Selamat datang kembali!', 
-                timer: 1000, 
-                showConfirmButton: false,
-                background: '#fff',
-                color: '#1e3a8a'
-            }).then(() => { 
-                window.location.href = 'index.php'; 
-            });
-        })
-        .catch(err => {
-            Swal.fire({ 
-                icon: 'error', 
-                title: 'Login Gagal', 
-                text: err.message,
-                confirmButtonColor: '#3b82f6'
-            });
-        })
-        .finally(() => {
-            btn.disabled = false;
-            btn.innerHTML = originalText;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Autentikasi...';
+
+            fetch('api/auth.php', {
+                method: 'POST',
+                body: new FormData(this)
+            })
+                .then(async r => {
+                    const res = await r.json();
+                    if (!r.ok) throw new Error(res.message || 'Login Gagal');
+                    return res;
+                })
+                .then(res => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: 'Selamat datang kembali!',
+                        timer: 1000,
+                        showConfirmButton: false,
+                        background: '#fff',
+                        color: '#1e3a8a'
+                    }).then(() => {
+                        window.location.href = 'index.php';
+                    });
+                })
+                .catch(err => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Login Gagal',
+                        text: err.message,
+                        confirmButtonColor: '#3b82f6'
+                    });
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                });
         });
-    });
     </script>
 </body>
+
 </html>

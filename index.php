@@ -9,48 +9,46 @@ require_once __DIR__ . '/models/DashboardModel.php';
 
 ensure_session_started();
 
-// 1. Otoritas & Identitas
-$currentNpp = $_SESSION['npp'] ?? null;
-$roleId = $_SESSION['role_id'] ?? null;
-$roleName = $_SESSION['role_name'] ?? null;
-
-if (!$roleName && !empty($currentNpp) && isset($conn)) {
-    $stmtR = $conn->prepare("SELECT r.name FROM employee e JOIN roles r ON e.role_id = r.id WHERE e.npp = ?");
-    $stmtR->bind_param('s', $currentNpp);
-    $stmtR->execute();
-    if ($rowR = $stmtR->get_result()->fetch_assoc()) {
-        $roleName = $rowR['name'];
-        $_SESSION['role_name'] = $roleName;
-    }
-    $stmtR->close();
+// Cek Login
+if (!isset($_SESSION['npp'])) {
+    header('Location: ' . site_url('login.php'));
+    exit;
 }
 
-$isManager = ($roleId == 1 || $roleId == 2 || strtolower((string)$roleName) === 'manager' || strtolower((string)$roleName) === 'admin');
+$isManager = (strtolower($_SESSION['role_name'] ?? '') === 'manager' || strtolower($_SESSION['role_name'] ?? '') === 'admin');
+$currentNpp = $_SESSION['npp'];
 
-// 2. Pengambilan Data via Model (Aman dari error bool)
-$model = new DashboardModel($conn);
-
-// Filter Periode
+// Filter & Pagination (Initial Load)
 $selectedMonth = $_GET['bulan'] ?? date('m');
 $selectedYear = $_GET['tahun'] ?? date('Y');
 $selectedStatus = $_GET['status_tugas'] ?? 'semua';
-
-// Jika Semua Bulan, gunakan null sebagai signal
-if ($selectedMonth === 'semua_bulan') {
-    $currentMonth = null;
-} else {
-    $currentMonth = "$selectedYear-$selectedMonth";
-}
-
-// Pagination untuk Tabel Progres
-$itemsPerPage = 10;
 $currentPage = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$itemsPerPage = 10;
 $offset = ($currentPage - 1) * $itemsPerPage;
 
-$totalUserProgress = $model->getTotalEmployees($isManager, $currentNpp, $selectedStatus, $currentMonth);
-$userProgress = $model->getUserProgress($isManager, $currentNpp, $currentMonth, $itemsPerPage, $offset, $selectedStatus);
+$model = new DashboardModel($conn);
+$userProgress = $model->getUserProgress($isManager, $currentNpp, $selectedMonth, $selectedYear, $itemsPerPage, $offset, $selectedStatus);
+$totalUserProgress = $model->getTotalEmployees($isManager, $currentNpp, $selectedStatus, $selectedMonth, $selectedYear);
 
-// 3. Render Tampilan
+// Get counts for small boxes (Current month only)
+$counts = $model->getCounts($isManager, $currentNpp, date('Y-m'));
+
+// Hitung total revisi untuk alert (khusus user ybs jika bukan manager, atau semua jika manager)
+$sqlAlert = "SELECT COUNT(*) as cnt FROM pekerjaan WHERE status = 'revisi'";
+if (!$isManager) { $sqlAlert .= " AND assigned_to_npp = '$currentNpp'"; }
+$resAlert = $conn->query($sqlAlert);
+$revisiAlertCount = $resAlert ? ($resAlert->fetch_assoc()['cnt'] ?? 0) : 0;
+
+// Hitung jumlah agenda unik (Grouping sesuai logika kalender)
+$sqlAgenda = "SELECT COUNT(*) as cnt FROM (
+    SELECT 1 FROM pekerjaan 
+    WHERE status = 'revisi' " . (!$isManager ? " AND assigned_to_npp = '$currentNpp' " : "") . "
+    GROUP BY COALESCE(master_tugas_id, 0), tgl_mulai, (CASE WHEN master_tugas_id IS NULL THEN judul ELSE '' END)
+) as grouped";
+$resAgenda = $conn->query($sqlAgenda);
+$revisiAgendaCount = $resAgenda ? ($resAgenda->fetch_assoc()['cnt'] ?? 0) : 0;
+
+// Render Tampilan
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 

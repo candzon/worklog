@@ -90,6 +90,7 @@
                         <div class="col-md-4">
                             <label class="form-label fw-semibold small">TANGGAL TARGET</label>
                             <input type="date" name="target_tgl" id="fieldTargetTgl" class="form-control" required>
+                            <div id="targetHelperText" class="mt-2 small text-primary fw-semibold" style="min-height: 20px;"></div>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold small">BAGIAN PENERIMA</label>
@@ -120,6 +121,45 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let currentMode = 'create';
 
+    // Helper text logic for target date
+    const fieldPeriode = document.getElementById('fieldPeriode');
+    const fieldTargetTgl = document.getElementById('fieldTargetTgl');
+    const targetHelperText = document.getElementById('targetHelperText');
+
+    function updateTargetHelper() {
+        const periode = fieldPeriode.value;
+        const dateVal = fieldTargetTgl.value;
+        if (!dateVal) {
+            targetHelperText.textContent = '';
+            return;
+        }
+
+        const date = new Date(dateVal);
+        const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const dayName = dayNames[date.getDay()];
+        const dayOfMonth = date.getDate();
+
+        let message = '';
+        switch (periode) {
+            case 'harian':
+                message = '<i class="bi bi-info-circle me-1"></i> Tugas akan muncul SETIAP HARI.';
+                break;
+            case 'mingguan':
+                message = `<i class="bi bi-info-circle me-1"></i> Tugas akan muncul SETIAP HARI ${dayName.toUpperCase()}.`;
+                break;
+            case 'bulanan':
+                message = `<i class="bi bi-info-circle me-1"></i> Tugas akan muncul SETIAP TANGGAL ${dayOfMonth} tiap bulan.`;
+                break;
+            case 'triwulan':
+                message = `<i class="bi bi-info-circle me-1"></i> Tugas akan muncul SETIAP TANGGAL ${dayOfMonth} setiap 3 bulan sekali.`;
+                break;
+        }
+        targetHelperText.innerHTML = message;
+    }
+
+    fieldPeriode.addEventListener('change', updateTargetHelper);
+    fieldTargetTgl.addEventListener('change', updateTargetHelper);
+
     function refreshTable() {
         fetch('api/get_master_list.php' + window.location.search)
             .then(r => r.text())
@@ -147,6 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('fieldPeriode').value = data.periode;
             document.getElementById('fieldTargetTgl').value = data.target_tgl;
             document.getElementById('fieldBagianId').value = data.bagian_id;
+            updateTargetHelper(); // Update helper text after filling data
             alertEl.classList.add('d-none');
             modal.show();
         }
