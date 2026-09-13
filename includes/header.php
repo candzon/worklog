@@ -11,7 +11,6 @@ require_login();
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Worklog</title>
-
   <link rel="stylesheet" href="<?php echo asset_url('css/adminlte.css'); ?>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
     crossorigin="anonymous">
@@ -26,13 +25,16 @@ require_login();
       <div class="container-fluid">
         <ul class="navbar-nav">
           <li class="nav-item">
-            <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button"><i class="bi bi-list"></i></a>
+            <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button" aria-label="Buka sidebar"><i class="bi bi-list"></i></a>
           </li>
-          <!-- <li class="nav-item d-none d-md-block"><a href="<?php echo site_url('index.php'); ?>" class="nav-link">Home</a></li>
-          <li class="nav-item d-none d-md-block"><a href="<?php echo site_url('contact.php'); ?>" class="nav-link">Contact</a></li> -->
         </ul>
         <ul class="navbar-nav ms-auto">
-          <?php echo e($_SESSION['nama_emp'] ?? $_SESSION['npp'] ?? ''); ?>
+          <li class="nav-item d-none d-sm-block">
+            <span class="nav-link pe-0 py-1 d-flex align-items-center gap-2">
+              <span class="avatar-initials" aria-hidden="true"><?php echo e(strtoupper(mb_substr($_SESSION['nama_emp'] ?? 'U', 0, 1))); ?></span>
+              <span class="small fw-semibold"><?php echo e($_SESSION['nama_emp'] ?? $_SESSION['npp'] ?? ''); ?></span>
+            </span>
+          </li>
         </ul>
       </div>
     </nav>

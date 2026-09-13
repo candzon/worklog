@@ -1,90 +1,108 @@
-/* Project custom styles */
+/* =========================================================
+ * Style kustom Worklog
+ * Hanya berisi penyesuaian dari tema AdminLTE: sidebar, header,
+ * kalender FullCalendar, dan chart dashboard.
+ * ========================================================= */
 
-/* Global mobile spacing */
+/* ---------- Global mobile spacing ---------- */
 @media (max-width: 575.98px) {
-  .app-content{padding:1rem !important}
-  .container-fluid{padding-left:0.75rem;padding-right:0.75rem}
+  .app-content { padding: 1rem !important; }
+  .container-fluid { padding-left: 0.75rem; padding-right: 0.75rem; }
 }
 
-/* Brand flag behind logo in sidebar */
-.brand-link{position:relative;display:inline-flex;align-items:center}
-.brand-flag{
-  position:absolute;
-  left:4px;
-  top:50%;
-  transform:translateY(-50%) rotate(-6deg);
-  width:44px;
-  height:34px;
-  /* two-color flag with triangular point */
-  background: linear-gradient(90deg, #ffff 50%, #ffff 50%);
-  clip-path: polygon(0 0, 78% 0, 92% 50%, 78% 100%, 0 100%);
-  border-radius:6px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.12);
-  z-index:1;
+/* ---------- Sidebar ---------- */
+/* Brand: logo + teks sejajar, tanpa dekorasi berlebihan */
+.sidebar-brand .brand-link {
+  display: inline-flex;
+  align-items: center;
 }
-.brand-link .brand-image{position:relative;z-index:2;width:28px;height:28px;object-fit:contain;margin-left:8px}
-
-@media (max-width:576px){
-  .brand-flag{width:32px;height:26px;left:4px}
-  .brand-link .brand-image{width:22px;height:22px;margin-left:6px}
+.sidebar-brand .brand-image {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.sidebar-brand .brand-text {
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
-/* Mobile-friendly tweaks for daftar_pekerjaan modal and calendar */
+/* Item menu: sedikit radius dan jarak agar hover/active lebih jelas */
+.sidebar-menu .nav-link {
+  border-radius: 8px;
+  margin: 2px 10px;
+  transition: background-color 0.15s ease;
+}
+.sidebar-menu .nav-link.active {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Blok profil pengguna di bawah menu */
+.avatar-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  background: #0d5ba9; /* biru korporat dari tema adminlte, tanpa gradasi */
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.min-width-0 { min-width: 0; }
+.smaller { font-size: 0.72rem; }
+.sidebar-user .sidebar-divider {
+  border-color: rgba(255, 255, 255, 0.1);
+  margin: 0.75rem 1rem;
+}
+.sidebar-user .btn-logout {
+  width: calc(100% - 1.5rem) !important; /* meniadakan mx-3 pada tombol */
+}
+
+/* ---------- Kalender (FullCalendar) ---------- */
+#calendar .fc .fc-button.fc-button-primary { border-radius: 6px; }
+
+/* Tombol "Tambah Pekerjaan" ditempatkan di bawah grup prev/today/next */
+#calendar .fc .fc-toolbar-chunk:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+#calendar .fc .fc-toolbar-chunk:first-child .fc-button-group { margin-bottom: 6px; }
+
+/* Mobile: toolbar ditumpuk vertikal, tombol full-width, sasaran sentuh lebih besar */
 @media (max-width: 575.98px) {
   .modal .modal-content { height: 100vh; border-radius: 0; }
   .modal .modal-body { padding: 1rem; overflow: auto; }
   .modal .modal-footer { padding: 0.75rem; }
   .form-control, .form-select, textarea { font-size: 1rem; }
   .btn { padding: 0.6rem 0.9rem; }
+
   #calendar { padding: 0 6px; }
   #calendar .fc .fc-daygrid-event { font-size: 0.9rem; padding: 0.25rem; }
-  #calendar .fc .fc-toolbar-chunk { display: block; text-align: center; }
-  #calendar .fc .fc-toolbar-chunk .fc-button { margin: 4px 2px; }
+  #calendar .fc .fc-toolbar { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+  #calendar .fc .fc-toolbar-title { font-size: 1.05rem; }
+
+  #calendar .fc .fc-toolbar-chunk { width: 100%; text-align: center; }
+  #calendar .fc .fc-toolbar-chunk:last-child .fc-button-group { width: 100%; display: flex; }
+  #calendar .fc .fc-toolbar-chunk:last-child .fc-button-group .fc-button { flex: 1; }
+  #calendar .fc .fc-toolbar-chunk:first-child { align-items: stretch; }
+  #calendar .fc .fc-toolbar-chunk:first-child .fc-addPekerjaan-button { width: 100%; }
+  #calendar .fc .fc-button { padding: 0.55rem 0.75rem; }
+
+  /* list view: sembunyikan kolom waktu yang tidak terpakai */
+  #calendar .fc .fc-list-event-time { display: none; }
+  #calendar .fc .fc-list-table td.fc-list-event-time { padding: 0; width: 0; }
 }
 
-/* Additional mobile tweaks for FullCalendar */
+/* ---------- Chart dashboard (Chart.js) ---------- */
+.dashboard-chart {
+  display: block;
+  width: 100% !important;
+  max-height: 320px;
+}
 @media (max-width: 575.98px) {
-  /* tighten toolbar and center title */
-  .mobile-calendar .fc .fc-toolbar-title { font-size: 1rem; }
-  .mobile-calendar .fc .fc-toolbar-chunk { display:block; text-align:center; }
-  .mobile-calendar .fc .fc-daygrid-event, .mobile-calendar .fc .fc-list-item { white-space: normal; }
-  /* make list items more compact */
-  .mobile-calendar .fc .fc-list-item > .fc-list-item-main { padding: 0.35rem 0.5rem; }
-  .mobile-calendar .fc .fc-daygrid-event { padding: 0.25rem 0.4rem; }
+  .dashboard-chart { max-height: none; }
 }
-
-/* FullCalendar toolbar layout (scoped to this page's calendar) */
-#calendar .fc .fc-button.fc-button-primary{border-radius:6px}
-
-/* Place the custom add button under the prev/today/next group */
-#calendar .fc .fc-toolbar-chunk:first-child{display:flex;flex-direction:column;align-items:flex-start}
-#calendar .fc .fc-toolbar-chunk:first-child .fc-button-group{margin-bottom:6px}
-
-/* Mobile: make toolbar easier to tap and hide list time column */
-@media (max-width: 575.98px) {
-  #calendar .fc .fc-toolbar{flex-direction:column;align-items:stretch;gap:0.5rem}
-  #calendar .fc .fc-toolbar-chunk{width:100%;text-align:center}
-  #calendar .fc .fc-toolbar-chunk:first-child{align-items:stretch}
-  #calendar .fc .fc-toolbar-chunk:first-child .fc-button-group{width:100%;display:flex}
-  #calendar .fc .fc-toolbar-chunk:first-child .fc-button-group .fc-button{flex:1}
-  #calendar .fc .fc-toolbar-chunk:first-child .fc-addPekerjaan-button{width:100%}
-  #calendar .fc .fc-toolbar-title{font-size:1.05rem}
-
-  /* Right-side view buttons become full-width segmented controls */
-  #calendar .fc .fc-toolbar-chunk:last-child .fc-button-group{width:100%;display:flex}
-  #calendar .fc .fc-toolbar-chunk:last-child .fc-button-group .fc-button{flex:1}
-
-  /* Better touch targets */
-  #calendar .fc .fc-button{padding:0.55rem 0.75rem}
-
-  /* list view: hide event time column completely */
-  #calendar .fc .fc-list-event-time{display:none}
-  #calendar .fc .fc-list-table td.fc-list-event-time{padding:0;width:0}
-}
-
-/* Dashboard charts (Chart.js) */
-.dashboard-chart{display:block;width:100% !important;max-height:320px}
-@media (max-width: 575.98px) {
-  .dashboard-chart{max-height:none}
-}
-

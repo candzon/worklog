@@ -40,6 +40,18 @@ function require_app($path) {
 // Session helpers
 function ensure_session_started() {
     if (session_status() === PHP_SESSION_NONE) {
+        // Cookie session aman: hanya bisa diakses via HTTP (bukan JS), same-site Lax
+        // mencegah pembacaan cookie lewat XSS dan pengiriman silang antar situs.
+        // Flag `secure` diaktifkan otomatis ketika aplikasi diakses via HTTPS.
+        $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || ($_SERVER['SERVER_PORT'] ?? 0) == 443;
+        session_set_cookie_params([
+            'lifetime' => 0,
+            'path' => '/',
+            'secure' => $https,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
         session_start();
     }
 }
@@ -56,7 +68,7 @@ function set_user_npp($npp, $nama_emp = null, $nama_bagian = null, $role_id = nu
 
 function clear_user_session() {
     ensure_session_started();
-    unset($_SESSION['npp'], $_SESSION['nama_emp'], $_SESSION['nama_bagian'], $_SESSION['role_id']);
+    unset($_SESSION['npp'], $_SESSION['nama_emp'], $_SESSION['nama_bagian'], $_SESSION['role_id'], $_SESSION['role_name']);
     if (function_exists('session_regenerate_id')) session_regenerate_id(true);
 }
 
