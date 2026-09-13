@@ -4,7 +4,13 @@ Sistem pelaporan pekerjaan berbasis web untuk perusahaan. Pegawai melihat tugas 
 
 ## Screenshot
 
-![Login — Worklog](docs/screenshot-login.png)
+| Login                                   | Dashboard                                     | Daftar Pekerjaan                          |
+| --------------------------------------- | --------------------------------------------- | ----------------------------------------- |
+| ![Login](docs/screenshot-login.png)     | ![Dashboard](docs/screenshot-dashboard.png)   | ![Daftar](docs/screenshot-daftar.png)     |
+
+Proteksi halaman tanpa session: redirect ke login + API mengembalikan 401.
+
+![Guard](docs/screenshot-guard.png)
 
 ## Key Features
 
@@ -168,9 +174,12 @@ Browser → PHP Script → mysqli ($conn) → MySQL
 
 ## Security Notes
 
-- Semua query memakai **prepared statements** (mysqli) → bebas SQL Injection umum
-- Output lewat helper `e()` (`htmlspecialchars`) untuk XSS
+- **Auth guard** — `require_login()` dipanggil di `index.php` dan `daftar_pekerjaan.php` sebelum output apa pun; tanpa session → redirect ke `login.php?next=...`
+- **API guard** — `api/events_pekerjaan.php` menolak request tanpa session dengan HTTP 401 dan tidak mengirim data pekerjaan apa pun; `api/mark_done.php` dan `api/create_pekerjaan.php` sudah verifikasi session + otorisasi (`ditugaskan == npp` untuk mark done)
+- Semua query memakai **prepared statements** (mysqli) → tahan SQL Injection
+- Output lewat helper `e()` (`htmlspecialchars`) untuk XSS; payload SweetAlert di-escape (`JSON_HEX_*`)
 - `session_regenerate_id(true)` saat login/logout (session fixation)
+- Login memverifikasi password dengan `password_verify` (bcrypt) bila tersedia, dengan fallback perbandingan plaintext untuk data lama — disarankan semua password disimpan bcrypt
 - `config/database.php` menyimpan kredensial **di source code** — untuk produksi disarankan pindah ke env var / file di luar webroot
 - Error koneksi DB tidak menampilkan `connect_error` ke user (`die('Database connection failed.')`)
 

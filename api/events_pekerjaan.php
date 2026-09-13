@@ -5,6 +5,13 @@ require_once __DIR__ . '/../config/database.php';
 ensure_session_started();
 header('Content-Type: application/json; charset=utf-8');
 
+// Proteksi API: tanpa session, tolak dengan 401 dan jangan kirim data pekerjaan apa pun
+if (empty($_SESSION['npp'])) {
+    http_response_code(401);
+    echo json_encode(['error' => 'Unauthorized']);
+    exit;
+}
+
 $events = [];
 if (isset($conn)) {
     // If the current user has role 'user', only return events assigned to them

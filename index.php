@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/functions/helpers.php';
 require_once __DIR__ . '/config/database.php';
+// Proteksi halaman dashboard: wajib login, jika tidak redirect ke login.php dengan next param
+require_login();
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 

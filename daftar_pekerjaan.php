@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/functions/helpers.php';
+// Proteksi halaman sebelum output apapun: wajib login, jika tidak redirect ke login.php
+require_login();
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
 
