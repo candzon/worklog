@@ -11,6 +11,19 @@
 }
 
 /* ---------- Sidebar ---------- */
+/* Batalkan `max-height: 100vh` dari AdminLTE: sidebar sticky hanya
+ * menutup setinggi viewport sehingga area di bawahnya (halaman di-scroll)
+ * kehilangan background gelap. Dengan max-height lentur, aside ikut
+ * melar sampai tinggi seluruh konten; penggeseran tetap ditangani
+ * oleh .sidebar-wrapper (overflow auto) di dalamnya. */
+@media (min-width: 992px) {
+  .sidebar-expand-lg.layout-fixed .app-sidebar {
+    max-height: none;
+  }
+  .sidebar-expand-lg.layout-fixed .app-sidebar .sidebar-wrapper {
+    height: 100vh;
+  }
+}
 /* Brand: logo + teks sejajar, tanpa dekorasi berlebihan */
 .sidebar-brand .brand-link {
   display: inline-flex;
